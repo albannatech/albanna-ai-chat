@@ -1,0 +1,151 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "creation": "2026-11-11 00:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "title",
+        "pinned",
+        "user",
+        "column_break_meta",
+        "status",
+        "provider",
+        "model",
+        "active_extension",
+        "last_activity",
+        "message_count",
+        "turn_snapshot"
+    ],
+    "fields": [
+        {
+            "default": "Derived from the first question in the conversation.",
+            "description": "Derived from the first question in the conversation.",
+            "fieldname": "title",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Title"
+        },
+        {
+            "default": "0",
+            "description": "A pinned conversation is kept at the top of the reader's list.",
+            "fieldname": "pinned",
+            "fieldtype": "Check",
+            "label": "Pinned"
+        },
+        {
+            "default": "__user",
+            "description": "The reader who started this conversation. Every row is <code>if_owner</code>, and the permission hooks in <code>hooks.py</code> are what make that mean the owner.",
+            "fieldname": "user",
+            "fieldtype": "Link",
+            "in_standard_filter": 1,
+            "label": "User",
+            "options": "User",
+            "set_only_once": 1
+        },
+        {
+            "fieldname": "column_break_meta",
+            "fieldtype": "Column Break",
+            "label": "Column Break"
+        },
+        {
+            "default": "idle",
+            "description": "Where the turn is. Mirrors <code>TurnState</code> in <code>albanna_ai_chat.chat.turn</code> — the two must not drift, and a test asserts it.",
+            "fieldname": "status",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Status",
+            "options": "idle\nrunning\nawaiting_tool\nawaiting_approval\nawaiting_answer\ndone\nfailed\nstopped",
+            "read_only": 1
+        },
+        {
+            "description": "Which provider this conversation talks to.",
+            "fieldname": "provider",
+            "fieldtype": "Data",
+            "label": "Provider",
+            "read_only": 1
+        },
+        {
+            "description": "Which model this conversation uses.",
+            "fieldname": "model",
+            "fieldtype": "Data",
+            "label": "Model",
+            "read_only": 1
+        },
+        {
+            "description": "The extension whose agent persona and prompts are active. Empty means the core's own prompt only.",
+            "fieldname": "active_extension",
+            "fieldtype": "Data",
+            "in_standard_filter": 1,
+            "label": "Active Extension",
+            "read_only": 1
+        },
+        {
+            "description": "Maintained on message insert, and nowhere else — a derived field computed in two places disagrees with itself.",
+            "fieldname": "last_activity",
+            "fieldtype": "Datetime",
+            "in_list_view": 1,
+            "label": "Last Activity",
+            "read_only": 1
+        },
+        {
+            "default": "0",
+            "description": "Maintained on message insert, and nowhere else.",
+            "fieldname": "message_count",
+            "fieldtype": "Int",
+            "in_list_view": 1,
+            "label": "Messages",
+            "read_only": 1
+        },
+        {
+            "description": "The serialised <code>Turn</code>, so a turn parked on the reader can be resumed after a restart. A turn that cannot be resumed cannot be recovered.",
+            "fieldname": "turn_snapshot",
+            "fieldtype": "Long Text",
+            "label": "Turn Snapshot",
+            "read_only": 1
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2026-11-11 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "AI Chat",
+    "name": "AI Chat Conversation",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "if_owner": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "Albanna Chat User",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "if_owner": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "title_field": "title",
+    "track_changes": 1
+}

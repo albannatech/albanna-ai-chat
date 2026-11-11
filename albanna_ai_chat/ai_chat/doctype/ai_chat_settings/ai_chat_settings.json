@@ -1,0 +1,120 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "creation": "2026-11-11 00:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "provider_section",
+        "default_provider",
+        "default_model",
+        "column_break_models",
+        "core_system_prompt",
+        "limits_section",
+        "max_provider_calls",
+        "max_tool_calls_per_response",
+        "column_break_limits",
+        "retention_days",
+        "extensions_section",
+        "enabled_extensions"
+    ],
+    "fields": [
+        {
+            "fieldname": "provider_section",
+            "fieldtype": "Section Break",
+            "label": "Provider"
+        },
+        {
+            "description": "Which provider new conversations use by default.",
+            "fieldname": "default_provider",
+            "fieldtype": "Data",
+            "label": "Default Provider"
+        },
+        {
+            "description": "Which model new conversations use by default.",
+            "fieldname": "default_model",
+            "fieldtype": "Data",
+            "label": "Default Model"
+        },
+        {
+            "fieldname": "column_break_models",
+            "fieldtype": "Column Break",
+            "label": "Column Break"
+        },
+        {
+            "description": "The core's own instructions, assembled before any extension's agent persona. An extension contributes <em>content</em> to this prompt, never the assembly logic.",
+            "fieldname": "core_system_prompt",
+            "fieldtype": "Long Text",
+            "label": "Core System Prompt"
+        },
+        {
+            "fieldname": "limits_section",
+            "fieldtype": "Section Break",
+            "label": "Limits"
+        },
+        {
+            "default": "12",
+            "description": "The most provider round-trips one turn may make. Mirrors <code>MAX_PROVIDER_CALLS</code> — a turn that needs more is a turn that should have been a flow.",
+            "fieldname": "max_provider_calls",
+            "fieldtype": "Int",
+            "label": "Max Provider Calls"
+        },
+        {
+            "default": "8",
+            "description": "The most tool calls one provider response may ask for. Mirrors <code>MAX_TOOL_CALLS_PER_RESPONSE</code>.",
+            "fieldname": "max_tool_calls_per_response",
+            "fieldtype": "Int",
+            "label": "Max Tool Calls Per Response"
+        },
+        {
+            "fieldname": "column_break_limits",
+            "fieldtype": "Column Break",
+            "label": "Column Break"
+        },
+        {
+            "default": "90",
+            "description": "How long chat logs are kept. They are an audit trail, not a business record, so they are pruned by age.",
+            "fieldname": "retention_days",
+            "fieldtype": "Int",
+            "label": "Retention (days)"
+        },
+        {
+            "fieldname": "extensions_section",
+            "fieldtype": "Section Break",
+            "label": "Extensions"
+        },
+        {
+            "description": "A JSON list of the extensions this site has <em>activated</em>. Activation is not installation: an app must be installed with <code>bench install-app</code> first, and this list only decides which installed extensions are live.",
+            "fieldname": "enabled_extensions",
+            "fieldtype": "Small Text",
+            "label": "Enabled Extensions"
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "issingle": 1,
+    "links": [],
+    "modified": "2026-11-11 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "AI Chat",
+    "name": "AI Chat Settings",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "states": [],
+    "track_changes": 1
+}

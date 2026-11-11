@@ -1,0 +1,90 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "creation": "2026-11-11 00:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "conversation",
+        "user",
+        "event",
+        "column_break_meta",
+        "tool_name",
+        "detail"
+    ],
+    "fields": [
+        {
+            "description": "The thread this event belongs to, when there is one.",
+            "fieldname": "conversation",
+            "fieldtype": "Link",
+            "in_standard_filter": 1,
+            "label": "Conversation",
+            "options": "AI Chat Conversation"
+        },
+        {
+            "default": "__user",
+            "description": "Who caused the event.",
+            "fieldname": "user",
+            "fieldtype": "Link",
+            "in_standard_filter": 1,
+            "label": "User",
+            "options": "User"
+        },
+        {
+            "description": "What happened. A closed vocabulary, so the log can be counted rather than only read.",
+            "fieldname": "event",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Event",
+            "options": "turn_started\nturn_done\ntool_called\ntool_refused\nwrite_approved\nwrite_refused\nquestion_asked\nturn_stopped\nturn_failed",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_meta",
+            "fieldtype": "Column Break",
+            "label": "Column Break"
+        },
+        {
+            "description": "The tool involved, when the event is about one.",
+            "fieldname": "tool_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Tool"
+        },
+        {
+            "description": "One line of detail. Not the content — the log records that something happened, not what was said.",
+            "fieldname": "detail",
+            "fieldtype": "Small Text",
+            "label": "Detail"
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2026-11-11 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "AI Chat",
+    "name": "AI Chat Log",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "creation",
+    "sort_order": "DESC",
+    "states": [],
+    "title_field": "event",
+    "track_changes": 1
+}

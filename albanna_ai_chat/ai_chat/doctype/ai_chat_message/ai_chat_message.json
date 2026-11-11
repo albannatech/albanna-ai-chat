@@ -1,0 +1,131 @@
+{
+    "actions": [],
+    "allow_rename": 0,
+    "creation": "2026-11-11 00:00:00.000000",
+    "doctype": "DocType",
+    "editable_grid": 1,
+    "engine": "InnoDB",
+    "field_order": [
+        "conversation",
+        "role",
+        "content",
+        "column_break_meta",
+        "tool_name",
+        "tool_call_id",
+        "source",
+        "is_error",
+        "summary"
+    ],
+    "fields": [
+        {
+            "description": "The thread this message belongs to. A message that belongs to no thread is a message nobody sees.",
+            "fieldname": "conversation",
+            "fieldtype": "Link",
+            "in_standard_filter": 1,
+            "label": "Conversation",
+            "options": "AI Chat Conversation",
+            "reqd": 1,
+            "set_only_once": 1
+        },
+        {
+            "default": "user",
+            "description": "Mirrors <code>Role</code> in <code>albanna_ai_chat.chat.message</code>.",
+            "fieldname": "role",
+            "fieldtype": "Select",
+            "in_list_view": 1,
+            "in_standard_filter": 1,
+            "label": "Role",
+            "options": "system\nuser\nassistant\ntool",
+            "reqd": 1
+        },
+        {
+            "description": "What was said, or what the tool returned.",
+            "fieldname": "content",
+            "fieldtype": "Long Text",
+            "label": "Content",
+            "reqd": 1
+        },
+        {
+            "fieldname": "column_break_meta",
+            "fieldtype": "Column Break",
+            "label": "Column Break"
+        },
+        {
+            "description": "The tool's name, on a <code>tool</code> message. Carried alongside the id because some providers match on name and some on id.",
+            "fieldname": "tool_name",
+            "fieldtype": "Data",
+            "in_list_view": 1,
+            "label": "Tool Name",
+            "read_only": 1
+        },
+        {
+            "description": "Which call a <code>tool</code> message answers. A result with no address is a result the model cannot match.",
+            "fieldname": "tool_call_id",
+            "fieldtype": "Data",
+            "label": "Tool Call ID",
+            "read_only": 1
+        },
+        {
+            "description": "Provenance: <code>reader</code>, <code>model</code>, or the tool's source.",
+            "fieldname": "source",
+            "fieldtype": "Data",
+            "label": "Source",
+            "read_only": 1
+        },
+        {
+            "default": "0",
+            "description": "True when this message records a tool that failed. Kept as a field rather than inferred from the content, because a failure the reader can filter for is a failure the reader can find.",
+            "fieldname": "is_error",
+            "fieldtype": "Check",
+            "label": "Is Error",
+            "read_only": 1
+        },
+        {
+            "description": "One line saying what the call found — \"Read 3 files\". It is what the panel shows beside the tool's name.",
+            "fieldname": "summary",
+            "fieldtype": "Small Text",
+            "label": "Summary",
+            "read_only": 1
+        }
+    ],
+    "index_web_pages_for_search": 1,
+    "links": [],
+    "modified": "2026-11-11 00:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "AI Chat",
+    "name": "AI Chat Message",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "if_owner": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "Albanna Chat User",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "if_owner": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "System Manager",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "creation",
+    "sort_order": "ASC",
+    "states": [],
+    "title_field": "content",
+    "track_changes": 1
+}
