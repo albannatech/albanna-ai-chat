@@ -106,7 +106,7 @@ its tools and only its tools.
 | **1 — Chat runtime** | ✅ State machine, message model, doctypes, permissions, services |
 | **2 — File tools** | ✅ Specs, port, Frappe handlers and guards — implemented and tested |
 | **3 — Extension seam** | ✅ Hook, atomic validation, activation, Settings API, version compatibility |
-| **4 — Frontend port** | 🔶 Build pipeline recovered; pure layer ported and tested (53 JS tests); transport and panel not yet built |
+| **4 — Frontend port** | 🔶 Build pipeline recovered; pure layer, access, attachments and the transport ported and tested (94 JS tests). The Vue panel and the server endpoints the transport calls are not built yet |
 | **5 — `healthcare-mcp`** | the reference extension, with one real transactional flow |
 
 ### Building and testing the frontend
