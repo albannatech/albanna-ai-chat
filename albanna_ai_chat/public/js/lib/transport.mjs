@@ -30,6 +30,7 @@
 // they are the only two functions here that do.
 
 import { serverMessage } from "./errors.mjs";
+import { translate } from "./i18n.mjs";
 import { ENDPOINTS, STREAM_EVENT } from "./wire.mjs";
 
 /** How often to ask whether the turn is done, the first time. */
@@ -84,15 +85,6 @@ export function nextPollDelay({ lastEventAt = 0, idlePolls = 0 }, now) {
   }
   const grown = STATUS_POLL_MS * STATUS_POLL_GROWTH ** Math.max(0, idlePolls);
   return Math.min(Math.round(grown), STATUS_POLL_MAX_MS);
-}
-
-/** Frappe's translation function, or a pass-through when there is no Desk.
- *
- * The transport is imported by tests that run under plain node, where `__`
- * does not exist. A module that throws on import in a test is a module whose
- * pure half cannot be tested, which is the whole point of having one. */
-function translate(text) {
-  return typeof globalThis.__ === "function" ? globalThis.__(text) : text;
 }
 
 /**

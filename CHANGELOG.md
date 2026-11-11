@@ -9,6 +9,39 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4f — the reader's language, and the labels that carry it.**
+
+- `public/js/lib/i18n.mjs` — `translate()`, the one guard that lets a module
+  with a sentence in it be imported under plain node, where Frappe's `__` does
+  not exist. The guard lives here once rather than being copied into every
+  module that has a sentence, because a guard copied into six files is a guard
+  that drifts. The fallback is the source string, not an empty one: a missing
+  translation that renders blank is a panel with holes in it.
+- `public/js/lib/tool-labels.mjs` — what a tool call is called in the reader's
+  language. The table is **rewritten** for this core's three file tools rather
+  than ported from `albanna`'s thirteen, because an extension's tools are names
+  this module has never heard of and a table that guessed would be a table that
+  was wrong. An extension declares its own labels through `EXTENSION_LABELS`,
+  which is the seam rather than a hardcoded list.
+- `public/js/lib/notices.mjs` — the sentences the panel says in passing, keyed
+  rather than stored, so a reader whose language changes does not see
+  yesterday's sentence in this morning's language. `noticeKeys()` is exported so
+  a test can assert every key has a sentence behind it.
+- `tests/js/i18n.test.mjs`, `tests/js/tool-labels.test.mjs`,
+  `tests/js/notices.test.mjs` — 34 new tests.
+
+### Changed
+
+- `lib/transport.mjs` now takes its translation from `lib/i18n.mjs` rather than
+  carrying a private guard, so there is one implementation of that rule.
+
+### Fixed
+
+- `translate()` called Frappe's `__` with the source string only, dropping the
+  substitutions. A translated sentence would have rendered with its placeholders
+  still in it — a panel reading "Tools used: {0}". Found by the i18n tests, which
+  assert on what `__` is handed.
+
 **Layer 4e — the remaining pure frontend modules, consolidated onto one tree.**
 
 Two parallel ports of `albanna`'s side-chat had accumulated: one under

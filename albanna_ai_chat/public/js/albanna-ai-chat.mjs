@@ -16,6 +16,13 @@
  * their event name and endpoints from `lib/wire.mjs` rather than spelling them
  * out.
  *
+ * Stage 4f adds the reader's language: `lib/i18n.mjs` is the one guard that
+ * keeps a module with a sentence in it importable under plain node, and
+ * `lib/tool-labels.mjs` / `lib/notices.mjs` are the sentences themselves. The
+ * label table is rewritten for this core's three file tools rather than ported
+ * from `albanna`'s thirteen, and an extension declares its own labels through
+ * `EXTENSION_LABELS` rather than through a hardcoded list.
+ *
  * The shape is the one `albanna` documented at length in its own hooks: a
  * framework-free launcher that asks the server whether the widget should
  * render, places a button and an empty panel on the page, and fetches the
@@ -28,8 +35,7 @@
  * `lib/wire.mjs`, which is the one place the frontend's assumptions about the
  * server live.
  *
- * Still to come: the panel itself, and the server endpoints in `lib/wire.mjs`
- * that the transport calls.
+ * Still to come: the panel itself.
  */
 
 import {
@@ -47,6 +53,15 @@ import {
   storeAll,
   turnAttachments,
 } from "./lib/attachments.mjs";
+import { translate } from "./lib/i18n.mjs";
+import { noticeKeys, noticeText } from "./lib/notices.mjs";
+import {
+  describeTool,
+  statusLabel,
+  toolAction,
+  toolLabel,
+  toolSummary,
+} from "./lib/tool-labels.mjs";
 import { APP_NAME, STREAM_EVENT } from "./lib/wire.mjs";
 import { STATES, initialState } from "./lib/turn-state.mjs";
 import {
@@ -75,6 +90,14 @@ export {
   makeAttachment,
   storeAll,
   turnAttachments,
+  translate,
+  noticeKeys,
+  noticeText,
+  describeTool,
+  statusLabel,
+  toolAction,
+  toolLabel,
+  toolSummary,
   FIRST_POLL_MS,
   STATUS_POLL_MAX_MS,
   call,
