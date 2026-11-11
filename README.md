@@ -106,16 +106,17 @@ its tools and only its tools.
 | **1 — Chat runtime** | ✅ State machine, message model, doctypes, permissions, services |
 | **2 — File tools** | ✅ Specs, port, Frappe handlers and guards — implemented and tested |
 | **3 — Extension seam** | ✅ Hook, atomic validation, activation, Settings API, version compatibility |
-| **4 — Frontend port** | 🔶 Build pipeline recovered and tested; the widget itself not yet ported |
+| **4 — Frontend port** | 🔶 Build pipeline recovered; pure layer ported and tested (53 JS tests); transport and panel not yet built |
 | **5 — `healthcare-mcp`** | the reference extension, with one real transactional flow |
 
-### Building the frontend
+### Building and testing the frontend
 
 ```bash
 npm install
 npm run build                                  # emit bundles, update assets.json
 FRAPPE_BENCH_ROOT=/path/to/bench npm run build # when the workspace is not inside the bench
 npm run build:check                            # exit 1 if the output is stale (CI)
+npm test                                       # the pure layer, under plain node
 ```
 
 `app_include_js = ["albanna-ai-chat.bundle.js"]` is not a path. Frappe resolves
@@ -125,6 +126,26 @@ does all three; `tests/test_assets_contract.py` asserts the two lists cannot
 drift. Break the rule and the asset 404s from the site root, the browser logs
 it, and nothing on the page says so — the feature is simply absent, on every
 page, for every user, forever.
+
+### The frontend's three layers
+
+The port is a rewrite with a reference, not a copy, and the layers get
+different treatment:
+
+| Layer | What | Treatment |
+|---|---|---|
+| **A — pure** | `lib/format.mjs`, `lib/errors.mjs`, `lib/render-throttle.mjs` | Ported unchanged. Nothing in them is bound to this app's contract, so there was nothing to rewrite. |
+| **B — contract** | `lib/wire.mjs`, `lib/turn-state.mjs` | Rewritten. `albanna`'s widget had three turn phases; this core has eight, because a turn can be waiting on a tool, on the reader's approval of a write, or on the reader's answer to a question — three different things the panel shows differently. |
+| **C — built** | `public/dist/` | Rebuilt by `build.mjs`, which is the machine `albanna` never wrote down. |
+
+`lib/wire.mjs` is the one place the frontend's assumptions about the server
+live: the socket event, the endpoint paths, the envelope shape, the roles and
+the phases. The API implements it and the tests assert it, so when the two
+disagree the test fails rather than the panel silently doing nothing.
+
+esbuild tree-shakes what nothing imports, so a module enters the bundle when
+the panel first uses it — not before. That is why the bundle hash changed when
+the launcher started importing `lib/`, and why `format.mjs` is not in it yet.
 
 ### How a file tool actually runs
 

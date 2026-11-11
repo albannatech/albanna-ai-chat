@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node build.mjs",
     "build:check": "node build.mjs --check",
-    "clean": "node build.mjs --clean"
+    "clean": "node build.mjs --clean",
+    "test": "node --test 'tests/js/*.test.mjs'"
   },
   "devDependencies": {
     "esbuild": "^0.24.0"

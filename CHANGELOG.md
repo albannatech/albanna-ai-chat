@@ -9,6 +9,43 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4b — the pure frontend layer, ported and tested.**
+
+The port is a rewrite with a reference, not a copy, and the layers get
+different treatment:
+
+- `public/js/lib/format.mjs` — ported unchanged. Moments, numbers, byte
+  counts and read positions, via `Intl` so an Arabic interface gets
+  "قبل دقيقتين" without a second translation table. Nothing in it is bound to
+  this app's contract, so there was nothing to rewrite.
+- `public/js/lib/errors.mjs` — ported unchanged. The three-level unwrapping
+  of a Frappe refusal, which was written twice in the original and the two
+  copies drifted apart.
+- `public/js/lib/render-throttle.mjs` — ported unchanged. A thousand-token
+  answer was parsed a thousand times; the scheduler is a parameter so the
+  test needs no timers.
+- `public/js/lib/turn-state.mjs` — **rewritten**. `albanna`'s widget had
+  three turn phases; this core has eight, because a turn can be waiting on a
+  tool, on the reader's approval of a write, or on the reader's answer to a
+  question — three different things the panel has to show differently. The
+  eight mirror `chat.turn.TurnState`, and a test reads the Python source and
+  asserts the two lists agree.
+- `public/js/lib/wire.mjs` — **new**. The one place the frontend's
+  assumptions about the server live: the socket event, the endpoint paths,
+  the envelope shape, the roles, the phases. The API implements it and the
+  tests assert it, so when the two disagree the test fails rather than the
+  panel silently doing nothing.
+- `tests/js/` — 53 tests under `node --test`, wired in as `npm test`.
+
+The launcher now imports `lib/`, so the bundle contains the ported code: the
+hash moved from `B75F5SD9` to `JYC387S6`. esbuild tree-shakes what nothing
+imports, so `format.mjs` enters the bundle when the panel first uses it.
+
+### Notes
+
+- Still to come in Layer 4: the transport (socket with the poll fallback),
+  the panel itself, and the server endpoints `lib/wire.mjs` names.
+
 **Layer 4a — the frontend build pipeline, written down.**
 
 `albanna` shipped 1.5 MB of built assets in `public/dist/` with no build
