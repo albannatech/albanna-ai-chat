@@ -16,7 +16,8 @@
         "active_extension",
         "last_activity",
         "message_count",
-        "turn_snapshot"
+        "turn_snapshot",
+        "page"
     ],
     "fields": [
         {
@@ -105,6 +106,13 @@
             "fieldname": "turn_snapshot",
             "fieldtype": "Long Text",
             "label": "Turn Snapshot",
+            "read_only": 1
+        },
+        {
+            "description": "The Desk page the conversation started from, so a thread can be found again from the page it belongs to.",
+            "fieldname": "page",
+            "fieldtype": "Data",
+            "label": "Page",
             "read_only": 1
         }
     ],

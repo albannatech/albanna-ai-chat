@@ -231,12 +231,27 @@ class Turn:
 
         @raises IllegalTransition: when the event does not apply.
         """
-        if event is TurnEvent.APPROVAL_REQUIRED and self.awaiting_approval_for is None:
-            # Record *which* write the reader is being asked about.  A turn
-            # that parks without knowing what it waits on cannot be resumed —
-            # and a turn that cannot be resumed cannot be recovered after a
-            # restart, which is the whole reason this is a reducer.
-            if self.pending_calls:
+        # `==` and not `is`: a turn's event arrives as a *string* from every
+        # boundary that is not this module — a doctype field, a JSON payload, a
+        # queue job's arguments. `is` compares identity, so a string that means
+        # APPROVAL_REQUIRED would silently skip the branch below and the turn
+        # would park on an approval it never recorded. That is a turn the
+        # reader approves and nothing happens, which is the worst kind of bug:
+        # it looks like the reader's mistake.
+        if event == TurnEvent.APPROVAL_REQUIRED and self.awaiting_approval_for is None:
+            # Record *which* write the reader is being asked about. A turn that
+            # parks without knowing what it waits on cannot be resumed — and a
+            # turn that cannot be resumed cannot be recovered after a restart,
+            # which is the whole reason this is a reducer.
+            #
+            # The fallback fires only when there is exactly one pending call,
+            # because that is the only case where "the first one" is
+            # unambiguous. With several, the first may be a read that needs no
+            # approval at all, and guessing would park the turn on the wrong
+            # call — the reader approves a read, and the write behind it never
+            # runs. A caller with several pending calls sets this field itself,
+            # as `services/turn_loop._run_tools` does.
+            if len(self.pending_calls) == 1:
                 self.awaiting_approval_for = self.pending_calls[0]
         self.state = next_state(self.state, event)
         return self

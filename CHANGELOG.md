@@ -9,6 +9,71 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 5a — the chat API, the turn loop, and the provider port.**
+
+The frontend's transport declared a contract in `lib/wire.mjs`; this is the
+server that implements it.
+
+- `core/provider.py` — the provider port. `ProviderResponse` carries `text` and
+  `tool_calls`, and never both meaningfully: tool calls are acted on and the
+  text is kept as the assistant's message content, so a turn that called a tool
+  still has a transcript that reads as a sentence rather than a gap.
+  `NullProvider` refuses *loudly and specifically* — a site with no provider
+  configured gets "No model provider is configured for this site. Set a default
+  provider and model in Albanna AI Chat Settings", which is a sentence an
+  operator can fix, rather than a stack trace. `ScriptedProvider` answers from a
+  script and records what it was asked, so a test can assert on the question and
+  not only the answer.
+- `services/reach.py` — fills `core/toolset.Reach` from Frappe's DocPerm table.
+  "At least one DocType" is the whole visibility rule: a write tool is visible
+  when the caller holds the right *somewhere*, and whether they hold it on the
+  *target* of a call is a separate per-call question. Read from DocPerm rather
+  than `frappe.has_permission` because the question is about all doctypes and an
+  extension's tools act on doctypes this module has never heard of.
+- `services/turn_loop.py` — the resumable driver. `advance()` loads a turn's
+  state from its conversation, moves it as far as it can, and writes the state
+  back. Nothing is held in memory between calls, which is what lets a turn
+  survive a worker restart. A turn parked on the reader is picked up by the next
+  call — from an answer, from an approval, or from a poll that finds the work
+  already done.
+- `api/chat.py` — the seven endpoints `lib/wire.mjs` declares: `access`,
+  `conversations`, `start_turn`, `get_turn`, `stop_turn`, `answer_question`,
+  `resolve_approval`. A turn is addressed by its conversation, so the stream id
+  *is* the conversation name — the address is a row, not a handle in some
+  process's memory.
+- `tests/test_provider.py`, `tests/test_turn_serialisation.py`,
+  `tests/test_chat_api.py` — 54 new tests.
+
+### Fixed
+
+- `Turn.apply()` compared its event with `is`, so a turn's event arriving as a
+  *string* — from a doctype field, a JSON payload, or a queue job's arguments —
+  silently skipped the branch that records which write an approval is waiting
+  on. The turn parked on an approval it never recorded: the reader approves, and
+  nothing happens. That is the worst kind of bug, because it looks like the
+  reader's mistake. Now `==`.
+- `Turn.apply()`'s approval fallback picked `pending_calls[0]` unconditionally.
+  With several pending calls the first may be a *read* that needs no approval,
+  so guessing parked the turn on the wrong call. The fallback now fires only
+  when there is exactly one pending call — the only case where "the first one"
+  is unambiguous — and a caller with several sets the field itself, as
+  `_run_tools` does.
+
+### Notes
+
+- `_truthy()` exists because Frappe hands whitelisted arguments over as strings
+  and `bool("false")` is True. A helper that got that wrong would approve every
+  write a reader refused — and from the reader's side the button would simply
+  appear not to work.
+- `stop_turn` marks the turn stopped and drops the wait. The worker keeps
+  running and the answer is still parked, so the turn is not lost — it is merely
+  no longer waited for. A server-side cancel would have to reach into the worker
+  to stop a model call already in flight.
+- A stopped turn reports `ok`, not `error`. Reporting a stop as a failure
+  teaches the reader that pressing Stop breaks things.
+- `page` was added to `AI Chat Conversation`, so a thread can be found again
+  from the Desk page it belongs to.
+
 **Layer 4d — the turn transport, ported and tested.**
 
 - `public/js/lib/transport.mjs` — the socket fast path with the poll as the
