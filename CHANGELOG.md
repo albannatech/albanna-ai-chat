@@ -9,6 +9,45 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4h — Vue support in the build, and the panel itself.**
+
+- `build.mjs` now compiles `.vue` single-file components, using Vue's own
+  `compiler-sfc` — the same compiler `vite` uses — rather than a third-party
+  bridge that has to be trusted to keep up with Vue's releases. One dependency
+  (`vue` itself) rather than two.
+- `public/js/panel/SideChat.vue` — the panel, as a **view over `lib/` and
+  nothing else**. `albanna`'s `SideChatApp.vue` is 3,396 lines, most of it logic
+  that belongs in a module; over three releases that logic was extracted and
+  tested under plain node, and the component shrank each time. This is that end
+  state written once: every decision the panel makes is made by a tested module,
+  and what is left is the shape of the thing on screen.
+- The panel is a **second bundle**, fetched on the first click rather than
+  loaded with the page — a global hook is paid on every Desk page load, so the
+  framework itself must not be in it.
+- `css/albanna-ai-chat.css` now carries the panel, card, turn and composer
+  rules. The components carry **no `<style>` block**: every rule lives in the
+  one file both language directions are emitted from.
+- Six new contract tests in `tests/test_assets_contract.py`, including a drift
+  guard asserting every class the panel names is answered by the stylesheet —
+  negative-tested, an unanswered class fails it.
+
+### Fixed
+
+- `build.mjs` looked for its output by the *entry* name, but esbuild names
+  output after the *source* file's basename — so `js/panel/SideChat.vue` emits
+  `SideChat.js` and the build failed the moment an entry's source was named
+  anything other than the bundle. The lookup is now "the non-map file with the
+  right extension", which cannot drift from the source.
+
+### Notes
+
+- The panel's `data-phase` drives its own appearance, so the border colour and
+  the composer are computed from the one thing everything else is computed from
+  rather than from a second flag that could disagree.
+- A turn waiting on the reader is styled differently from one that is thinking.
+  A reader who cannot tell the difference waits for a spinner when what is
+  wanted is a button.
+
 **Layer 4g — the three modules the panel cannot be built without.**
 
 - `public/js/lib/question.mjs` — the question card. Ported from `albanna`,

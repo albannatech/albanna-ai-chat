@@ -50,6 +50,7 @@ import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
+import { compileScript, parse } from "vue/compiler-sfc";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP_NAME = "albanna_ai_chat";
@@ -60,6 +61,12 @@ const DIST_DIR = join(PUBLIC_DIR, "dist");
 const ENTRIES = [
   { name: "albanna-ai-chat", kind: "js", from: "js/albanna-ai-chat.mjs" },
   { name: "albanna-ai-chat", kind: "css", from: "css/albanna-ai-chat.css" },
+  // The panel is a *second* bundle, fetched on the first click rather than
+  // loaded with the page. `albanna` documented why at length in its hooks: a
+  // global hook is paid on every Desk page load, so the framework itself must
+  // not be in it. The launcher asks the server whether the widget should
+  // render, places a button and an empty panel, and fetches this on demand.
+  { name: "albanna-ai-chat-panel", kind: "js", from: "js/panel/SideChat.vue" },
 ];
 
 const args = new Set(process.argv.slice(2));
@@ -167,6 +174,73 @@ async function clearStale(entry) {
 }
 
 // --------------------------------------------------------------------------
+// Vue single-file components.
+//
+// esbuild has no loader for `.vue`, and the panel is written as one. Rather
+// than pull in a plugin, the compilation is done here with Vue's own
+// `compiler-sfc` — the same compiler `vite` uses — so the build has one
+// dependency (`vue` itself) rather than a third-party bridge that has to be
+// trusted to keep up with Vue's releases.
+//
+// `inlineTemplate: true` compiles the template into the script's own output,
+// so there is no second module to resolve and no virtual-file bookkeeping.
+//
+// Styles are deliberately *not* compiled here. A `<style>` block in a
+// component would need its own extraction pass and its own output file, and
+// the app already has one CSS bundle that both directions are emitted from.
+// So components carry no `<style>`, and every rule lives in
+// `css/albanna-ai-chat.css` — one place, one file, one RTL twin. A component
+// that needs a class names it, and the stylesheet answers.
+// --------------------------------------------------------------------------
+
+function vuePlugin() {
+  return {
+    name: "albanna-vue-sfc",
+    setup(build) {
+      build.onLoad({ filter: /\.vue$/ }, async (args) => {
+        const source = await readFile(args.path, "utf8");
+        const { descriptor, errors } = parse(source, { filename: args.path });
+
+        if (errors.length) {
+          // A parse error is reported with its location, because "the build
+          // failed" sends a reader to the wrong line of the wrong file.
+          return {
+            errors: errors.map((e) => ({
+              text: `${basename(args.path)}: ${e.message}`,
+              location: e.loc
+                ? {
+                    file: args.path,
+                    line: e.loc.start.line,
+                    column: e.loc.start.column,
+                  }
+                : undefined,
+            })),
+          };
+        }
+
+        // A stable id per file, derived from its path rather than from a
+        // counter, so two builds of the same tree produce the same output and
+        // the content hash only moves when the source does.
+        const id = createHash("sha256").update(args.path).digest("hex").slice(0, 16);
+
+        try {
+          const compiled = compileScript(descriptor, { id, inlineTemplate: true });
+          return {
+            contents: compiled.content,
+            loader: "js",
+            resolveDir: dirname(args.path),
+          };
+        } catch (error) {
+          return {
+            errors: [{ text: `${basename(args.path)}: ${error.message}` }],
+          };
+        }
+      });
+    },
+  };
+}
+
+// --------------------------------------------------------------------------
 // The build.
 // --------------------------------------------------------------------------
 
@@ -191,18 +265,24 @@ async function buildOne(entry) {
     format: "esm",
     write: false,
     logLevel: "silent",
+    plugins: [vuePlugin()],
   });
 
-  // esbuild appends the extension to `entryNames: "[name]"`, so the emitted
-  // file is `albanna-ai-chat.js` / `.css`. Match on the basename rather than
-  // a suffix, so a future entry name containing a dot cannot break the lookup.
-  const wanted = `${entry.name}.${entry.kind}`;
+  // esbuild names its output after the *source* file's basename, not after the
+  // entry name in ENTRIES — so `js/panel/SideChat.vue` emits `SideChat.js` even
+  // though the bundle is called `albanna-ai-chat-panel`. Matching on the entry
+  // name therefore breaks the moment an entry's source is named anything else.
+  //
+  // One entry point means one output of that kind, so the robust lookup is
+  // "the non-map file with the right extension" rather than a name that has to
+  // be kept in sync with the source by hand.
+  const ext = entry.kind === "js" ? ".js" : ".css";
   const file = result.outputFiles.find(
-    (f) => basename(f.path) === wanted && !f.path.endsWith(".map"),
+    (f) => f.path.endsWith(ext) && !f.path.endsWith(".map"),
   );
   if (!file) {
     const seen = result.outputFiles.map((f) => basename(f.path)).join(", ");
-    throw new Error(`esbuild produced no ${wanted} (got: ${seen || "nothing"})`);
+    throw new Error(`esbuild produced no ${ext} output (got: ${seen || "nothing"})`);
   }
 
   const hash = contentHash(file.contents);
@@ -212,7 +292,7 @@ async function buildOne(entry) {
   await clearStale(entry);
   await writeFile(finalPath, file.contents);
 
-  const map = result.outputFiles.find((f) => f.path.endsWith(`/${entry.name}.map`));
+  const map = result.outputFiles.find((f) => f.path.endsWith(".map"));
   if (map) {
     await writeFile(`${finalPath}.map`, map.contents);
   }

@@ -1,17 +1,29 @@
 /*
- * The Desk stylesheet — Stage 4a establishes the pipeline, so this is the
- * minimum that proves the bundle builds, hashes and registers.
+ * The Desk stylesheet — the panel, the drawer and the launcher.
  *
  * Written with CSS *logical* properties (`inline-start`, `margin-inline`,
- * `padding-inline`) rather than physical ones (`left`, `margin-left`). That
- * is what lets one file serve both LTR and RTL without a flipping pass:
- * `bundled_asset()` prefixes `rtl_` for right-to-left users and looks the
- * name up in assets-rtl.json, and the build emits that twin from these same
- * bytes. An Arabic-first product should not need two stylesheets to say the
- * same thing twice.
+ * `padding-inline`) rather than physical ones (`left`, `margin-left`). That is
+ * what lets one file serve both LTR and RTL without a flipping pass:
+ * `bundled_asset()` prefixes `rtl_` for right-to-left users and looks the name
+ * up in assets-rtl.json, and the build emits that twin from these same bytes.
+ * An Arabic-first product should not need two stylesheets to say the same
+ * thing twice.
  *
- * Stage 4b replaces this with the ported panel, drawer and launcher styles.
+ * Why the styles live here and not in the components
+ * -------------------------------------------------
+ * The Vue components carry no `<style>` block. A scoped style would need its
+ * own extraction pass in the build and its own output file, and the app
+ * already has one CSS bundle that both directions are emitted from. So a
+ * component names a class and this file answers — one place to look for a
+ * rule, one file to emit, one RTL twin.
+ *
+ * The class names are the component's own: `albanna-ai-chat-panel__head` is
+ * the panel's header, and nothing else on the Desk may claim it.
  */
+
+/* --------------------------------------------------------------------------
+ * The launcher — the button that opens the panel.
+ * -------------------------------------------------------------------------- */
 
 .albanna-ai-chat-launcher {
   position: fixed;
@@ -34,6 +46,14 @@
   background: var(--hover-bg, #f7f7f7);
 }
 
+/* --------------------------------------------------------------------------
+ * The panel.
+ *
+ * `data-phase` is the turn's state, and it is the one thing everything on
+ * screen is computed from — so the panel's own appearance is driven by it too
+ * rather than by a second flag that could disagree.
+ * -------------------------------------------------------------------------- */
+
 .albanna-ai-chat-panel {
   position: fixed;
   inset-block-end: 4rem;
@@ -51,4 +71,225 @@
 .albanna-ai-chat-panel[data-open="true"] {
   display: flex;
   flex-direction: column;
+}
+
+/* A turn waiting on the reader is not a turn that is thinking. The composer
+ * says so, and the panel's border says so, because a reader who cannot tell
+ * the difference waits for a spinner when what is wanted is a button. */
+.albanna-ai-chat-panel[data-phase="awaiting_approval"],
+.albanna-ai-chat-panel[data-phase="awaiting_answer"] {
+  border-color: var(--yellow-500, #e0a800);
+}
+
+.albanna-ai-chat-panel[data-phase="failed"] {
+  border-color: var(--red-500, #e24c4c);
+}
+
+.albanna-ai-chat-panel__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-block-end: 1px solid var(--border-color, #d0d0d0);
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7680);
+}
+
+.albanna-ai-chat-panel__status {
+  font-weight: 600;
+  color: var(--text-color, #1f272e);
+}
+
+.albanna-ai-chat-panel__activity {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.albanna-ai-chat-panel__transcript {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.albanna-ai-chat-panel__error,
+.albanna-ai-chat-panel__notice {
+  margin: 0 0.75rem 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+}
+
+.albanna-ai-chat-panel__error {
+  background: var(--red-50, #fdeaea);
+  color: var(--red-700, #a02121);
+}
+
+.albanna-ai-chat-panel__notice {
+  background: var(--yellow-50, #fdf6e3);
+  color: var(--yellow-800, #7a5c00);
+}
+
+/* --------------------------------------------------------------------------
+ * A turn in the transcript.
+ * -------------------------------------------------------------------------- */
+
+.albanna-ai-chat-turn {
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.albanna-ai-chat-turn__body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The reader's own words are set apart from the assistant's, because a
+ * transcript where both look the same is a transcript nobody can re-read. */
+.albanna-ai-chat-turn--user .albanna-ai-chat-turn__body {
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  background: var(--bg-light-gray, #f4f5f6);
+}
+
+.albanna-ai-chat-turn--tool .albanna-ai-chat-turn__body {
+  font-family: var(--font-monospace, monospace);
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7680);
+}
+
+.albanna-ai-chat-turn__pending {
+  display: inline-block;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  margin-block-start: 0.25rem;
+  border-radius: 50%;
+  background: var(--primary, #2490ef);
+  animation: albanna-ai-chat-pulse 1.2s ease-in-out infinite;
+}
+
+.albanna-ai-chat-turn__tools {
+  margin-block-start: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7680);
+}
+
+@keyframes albanna-ai-chat-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * A card — a question, or a write waiting for approval.
+ *
+ * Both are the panel saying *the reader must decide*. They are the same shape
+ * because they are the same kind of interruption, and the warning inside the
+ * approval card is what tells the two apart.
+ * -------------------------------------------------------------------------- */
+
+.albanna-ai-chat-card {
+  margin: 0 0.75rem 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--yellow-500, #e0a800);
+  border-radius: 0.375rem;
+  background: var(--yellow-50, #fdf6e3);
+}
+
+.albanna-ai-chat-card__question {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.albanna-ai-chat-card__warning {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--red-700, #a02121);
+}
+
+.albanna-ai-chat-card__window {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7680);
+}
+
+.albanna-ai-chat-card__option {
+  display: block;
+  inline-size: 100%;
+  margin-block-end: 0.25rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border-color, #d0d0d0);
+  border-radius: 0.25rem;
+  background: var(--card-bg, #ffffff);
+  font-size: 0.8125rem;
+  text-align: start;
+  cursor: pointer;
+}
+
+.albanna-ai-chat-card__option:hover {
+  background: var(--hover-bg, #f7f7f7);
+}
+
+/* --------------------------------------------------------------------------
+ * The composer.
+ * -------------------------------------------------------------------------- */
+
+.albanna-ai-chat-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.75rem;
+  border-block-start: 1px solid var(--border-color, #d0d0d0);
+}
+
+.albanna-ai-chat-composer__input {
+  inline-size: 100%;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--border-color, #d0d0d0);
+  border-radius: 0.25rem;
+  background: var(--card-bg, #ffffff);
+  color: var(--text-color, #1f272e);
+  font: inherit;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.albanna-ai-chat-composer__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.albanna-ai-chat-composer__problem {
+  flex: 1;
+  font-size: 0.75rem;
+  color: var(--red-600, #c0392b);
+}
+
+.albanna-ai-chat-composer__actions button {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border-color, #d0d0d0);
+  border-radius: 0.25rem;
+  background: var(--card-bg, #ffffff);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.albanna-ai-chat-composer__actions button:hover:not(:disabled) {
+  background: var(--hover-bg, #f7f7f7);
+}
+
+.albanna-ai-chat-composer__actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

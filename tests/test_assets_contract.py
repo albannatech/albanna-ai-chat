@@ -136,3 +136,85 @@ def test_the_stylesheet_uses_logical_properties():
     css = (PUBLIC / "css" / "albanna-ai-chat.css").read_text()
     physical = re.findall(r"(?<![-\w])(?:margin|padding|border)-(?:left|right)\s*:", css)
     assert not physical, f"physical properties found: {physical[:5]}"
+
+
+# --------------------------------------------------------------------------
+# The panel bundle.
+#
+# The panel is a *second* bundle, fetched on the first click rather than loaded
+# with the page — a global hook is paid on every Desk page load, so the
+# framework itself must not be in it. That makes it a second entry point, a
+# second source file, and a second set of names that can drift from the first.
+# --------------------------------------------------------------------------
+
+PANEL_VUE = PUBLIC / "js" / "panel" / "SideChat.vue"
+
+
+def test_the_panel_is_a_separate_build_entry():
+    """A panel loaded with the page is a framework paid on every page load."""
+    names = _build_entry_names()
+    assert "albanna-ai-chat-panel" in names, "the panel has no build entry"
+
+
+def test_the_panel_entry_is_a_vue_component():
+    text = BUILD.read_text()
+    assert ".vue" in text, "no build entry points at a .vue source"
+    assert PANEL_VUE.exists(), "the panel component is missing"
+
+
+def test_the_build_can_compile_vue():
+    """esbuild has no `.vue` loader; the pipeline has to supply one."""
+    text = BUILD.read_text()
+    assert "compiler-sfc" in text, "the build does not compile single-file components"
+    assert "vuePlugin" in text, "the Vue plugin is not wired into the build"
+    package = (ROOT / "package.json").read_text()
+    assert '"vue"' in package, "vue is not a declared devDependency"
+
+
+def test_the_panel_carries_no_style_block():
+    """Every rule lives in the one CSS bundle both directions emit from.
+
+    A `<style>` block in a component would need its own extraction pass in the
+    build and its own output file — a second place to look for a rule.
+
+    Matched at the start of a line, because an SFC block is a top-level block
+    and the word also appears in this file's own prose about the decision.
+    """
+    source = PANEL_VUE.read_text()
+    blocks = re.findall(r"^<style[\s>]", source, flags=re.MULTILINE)
+    assert not blocks, "the panel carries a <style> block; styles belong in the CSS bundle"
+
+
+def test_the_panel_is_a_view_over_the_lib_modules():
+    """The whole point of the port: the component holds no logic of its own."""
+    source = PANEL_VUE.read_text()
+    imports = re.findall(r'from\s+"(\.\./lib/[^"]+)"', source)
+    assert len(imports) >= 8, f"the panel imports only {len(imports)} lib modules"
+    for path in imports:
+        target = (PANEL_VUE.parent / path).resolve()
+        assert target.exists(), f"the panel imports a module that does not exist: {path}"
+
+
+def test_every_class_the_panel_uses_is_answered_by_the_stylesheet():
+    """A class with no rule is a component that renders unstyled.
+
+    This is the drift guard for the decision to keep styles out of the
+    components: naming a class in the template and forgetting the stylesheet is
+    exactly the failure that decision makes possible, and nothing else in the
+    repo notices it.
+    """
+    source = PANEL_VUE.read_text()
+    css = (PUBLIC / "css" / "albanna-ai-chat.css").read_text()
+
+    used = set()
+    for match in re.finditer(r'class="([^"]+)"', source):
+        for name in match.group(1).split():
+            # A Vue binding is not a literal class name.
+            if "{" in name or "$" in name:
+                continue
+            used.add(name)
+    # The dynamic per-role class is built in the template; check its prefix.
+    used.add("albanna-ai-chat-turn--user")
+
+    missing = sorted(name for name in used if f".{name}" not in css)
+    assert not missing, f"classes used by the panel with no rule in the stylesheet: {missing}"
