@@ -7,6 +7,56 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-11-12
+
+### Added
+
+**Layer 7 — the four primitives an extension cannot supply itself.**
+
+Four of the five reference extensions specified the same defect in different
+clothes: a model call inside a document hook, a background write with
+privileges nobody authorised, a model's output landing straight in a live
+field, and record text interpolated raw into a prompt. These are four instances
+of one missing primitive, so the core now supplies all four and refuses to let
+an extension build its own.
+
+- `core/jobs.py` — `PrivilegeSnapshot` (what the caller could do, captured at
+  enqueue time), `JobRequest`, `RetryPolicy`, `JobOutcome`, and `validate_job`,
+  which refuses a job that carries no snapshot. A job with no snapshot runs
+  with rights nobody authorised, so it is the one rule with no exception.
+- `services/jobs.py` — the Frappe half. Runs a job as a dedicated principal
+  with no roles of its own, and `JobRunner.assert_may_write` *raises* rather
+  than returning a bool, because a handler that could carry on after a `False`
+  would carry on.
+- `core/file_bytes.py`, `tools/file_bytes.py` — the binary file port. A
+  separate channel from the three text tools, never a tool the model can see.
+  Bounded by a ceiling the caller names, enforced *during* the read rather than
+  after it, permission-checked before a single byte is fetched, and a refusal
+  returns no size and no content — a refusal that reported the file's size
+  would leak that the file exists.
+- `core/proposal.py` — the draft-then-promote gate. A model's output is a
+  `Proposal`: what it would change, how confident it is, which model and prompt
+  produced it. The policy fails **closed**: no policy means review, no
+  confidence means review, and a field the operator marked consequential is
+  never auto-accepted.
+- `core/template.py` — restricted templates and the data fence. A prompt
+  template accepts exactly one construct, `{fieldname}`, validated when the
+  operator saves it. Every record value is fenced with a standing instruction
+  before substitution, so a record field can never arrive as bare prose.
+- `core/validate.py` — `provider_import_problems`. The prohibition is enforced,
+  not advised: an extension whose source imports a provider is refused whole,
+  because the core owns the provider layer and an extension has no provider to
+  call from a hook.
+- `docs/adr/0022-the-four-primitives.md` — the decision, its consequences, and
+  the three alternatives rejected.
+
+### Fixed
+
+- `core/jobs.py` — `provider_imports` matched module names as substrings, so
+  `import openai_extra` was refused for containing `openai`. Now matched as a
+  whole dotted name. A guard that cries wolf is a guard operators learn to
+  bypass.
+
 ## [0.2.0] — 2026-11-12
 
 ### Added

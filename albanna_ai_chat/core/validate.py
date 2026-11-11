@@ -44,6 +44,7 @@ write declares compensation . every destructive action says how it is undone,
 
 from __future__ import annotations
 
+import inspect
 import sys
 import types
 from typing import Any
@@ -53,6 +54,7 @@ from albanna_ai_chat.core.flow import (
     FlowSpec,
     validate_flow_steps_resolve,
 )
+from albanna_ai_chat.core.jobs import hook_prohibition_problem, provider_imports
 from albanna_ai_chat.core.tools import (
     CORE_TOOL_NAMES,
     FORBIDDEN_PARAM_NAMES,
@@ -93,6 +95,31 @@ def _param_names(parameters: Any) -> set[str]:
     return {str(name).lower() for name in props}
 
 
+def provider_import_problems(module: Any) -> list[str]:
+    """Problems from a module that reaches past the core's provider layer.
+
+    The core owns the providers and the queue.  An extension that imports one
+    directly has built a second provider integration — and the second one is
+    the one nobody audited, the one that runs inside whatever hook called it,
+    and the one that makes a third-party API a dependency of a document save.
+
+    Scanned from source rather than from the imported module's attributes,
+    because the point is what the extension *wrote*, not what it happened to
+    bind.  A module whose source cannot be read (a compiled wheel, a REPL) is
+    not refused: the guard is a net, not a wall, and a net that blocks what it
+    cannot inspect is a net that blocks the core.
+    """
+    name = getattr(module, "__name__", repr(module))
+    try:
+        source = inspect.getsource(module)
+    except (OSError, TypeError):
+        return []
+    return [
+        str(hook_prohibition_problem(name, imported))
+        for imported in provider_imports(source)
+    ]
+
+
 def validate_module(
     module: Any,
     known_tools: set[str] | frozenset[str] | None = None,
@@ -116,6 +143,13 @@ def validate_module(
     known = set(known_tools) if known_tools is not None else set(CORE_TOOL_NAMES)
     name = getattr(module, "__name__", repr(module))
     problems: list[str] = []
+
+    # The provider prohibition is checked first and separately from the tool
+    # contract, because it is a different class of mistake: an unclassified
+    # tool is a bug in *this* module's manifest, while a provider import is an
+    # extension rebuilding a layer the core owns.  Both refuse the module, and
+    # neither is absorbed.
+    problems.extend(provider_import_problems(module))
 
     tools = getattr(module, TOOLS_ATTR, None)
     if not isinstance(tools, list):
