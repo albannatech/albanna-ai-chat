@@ -9,6 +9,42 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4c — the remaining pure frontend modules, ported and tested.**
+
+- `public/js/lib/access.mjs` — the chat access decision, shared by the
+  launcher and the form button. Ported from `albanna`'s `access.mjs`, and the
+  *reason* it exists is ported with it: the two bundles used to answer the
+  question separately — the launcher decided, the button assumed — so a user
+  who may not chat was given a button that did nothing when clicked. The
+  answer is now published once, including when it is "no", because a silent
+  refusal leaves the button waiting for an answer that never comes.
+- `public/js/lib/attachments.mjs` — the attachment rules, checked before the
+  bytes leave the browser. Ported from `albanna`'s `attachments.mjs`. It
+  carries no list of accepted types of its own: the browser is told which
+  types the site takes, because a browser that keeps a copy of the server's
+  list is a browser whose copy goes stale, and a stale list accepts a file
+  the server refuses.
+- `tests/js/access.test.mjs` and `tests/js/attachments.test.mjs` — 27 new
+  tests, run under plain node with a fake window and document.
+
+### Changed
+
+- The Desk entry point now imports and re-exports both new modules, so the
+  bundle actually contains them. A module that is ported but not imported is a
+  module the build silently drops.
+
+### Notes
+
+- `state.mjs` was **not** ported: `lib/turn-state.mjs` already supersedes it,
+  with the eight-phase vocabulary this core's `TurnState` uses rather than
+  `albanna`'s three. Porting it would have been a second state machine.
+- The access global and event names are this core's own
+  (`albannaAiChatAccess`, `albanna-ai-chat:access`) rather than `albanna`'s.
+  Two apps on one Desk sharing a global is two apps overwriting each other's
+  access decision.
+- `public/dist/` remains gitignored, matching `albanna`'s convention and its
+  stated reason: it is `bench build` output, rebuilt rather than committed.
+
 **Layer 4b — the pure frontend layer, ported and tested.**
 
 The port is a rewrite with a reference, not a copy, and the layers get

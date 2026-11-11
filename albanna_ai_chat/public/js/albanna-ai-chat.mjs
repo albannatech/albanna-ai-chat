@@ -6,6 +6,10 @@
  * and the turn state machine now live in `lib/`, are tested under plain
  * node, and are imported here so the bundle actually contains them.
  *
+ * Stage 4c adds the two remaining pure modules: the access decision the
+ * launcher and the form button must share, and the attachment rules checked
+ * before the bytes leave the browser.
+ *
  * The shape is the one `albanna` documented at length in its own hooks: a
  * framework-free launcher that asks the server whether the widget should
  * render, places a button and an empty panel on the page, and fetches the
@@ -21,10 +25,41 @@
  * itself, and the server endpoints in `lib/wire.mjs` that it calls.
  */
 
+import {
+  ACCESS_EVENT,
+  ACCESS_GLOBAL,
+  chatAllowed,
+  onAccessDecision,
+  publishAccess,
+} from "./lib/access.mjs";
+import {
+  REFUSED_SIZE,
+  REFUSED_TYPE,
+  checkAttachment,
+  makeAttachment,
+  storeAll,
+  turnAttachments,
+} from "./lib/attachments.mjs";
 import { APP_NAME, STREAM_EVENT } from "./lib/wire.mjs";
 import { STATES, initialState } from "./lib/turn-state.mjs";
 
-export { APP_NAME, STREAM_EVENT, STATES, initialState };
+export {
+  APP_NAME,
+  STREAM_EVENT,
+  STATES,
+  initialState,
+  ACCESS_EVENT,
+  ACCESS_GLOBAL,
+  chatAllowed,
+  onAccessDecision,
+  publishAccess,
+  REFUSED_SIZE,
+  REFUSED_TYPE,
+  checkAttachment,
+  makeAttachment,
+  storeAll,
+  turnAttachments,
+};
 
 export const VERSION = "0.1.0";
 
