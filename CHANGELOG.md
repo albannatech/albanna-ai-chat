@@ -9,6 +9,38 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4g — the three modules the panel cannot be built without.**
+
+- `public/js/lib/question.mjs` — the question card. Ported from `albanna`,
+  because a question card is a question card; the *address* is not ported,
+  because this core addresses a question by the turn it belongs to rather than
+  by its own doctype name. A card carrying the wrong address is a card whose
+  answer goes nowhere.
+- `public/js/lib/submit.mjs` — the composer's rules, ported unchanged because
+  they are the right rules. Adds `refusalText()`, so every refusal says what to
+  do about it — a refusal the reader cannot act on is a refusal that fails, and
+  the reader concludes the app is broken.
+- `public/js/lib/write-safety.mjs` — which writes cannot be undone, and what it
+  costs. The destructive list is **read from this core's own contract** rather
+  than guessed: `edit_file` declares `mechanism="reverse"` (swap the two strings
+  and the file returns to what it was) so it is *not* warned about, and
+  `write_file` declares `mechanism="none"` (the core ships no `delete_file`) so
+  it is. `declareDestructive()` is the seam an extension uses.
+- `tests/js/question.test.mjs`, `tests/js/submit.test.mjs`,
+  `tests/js/write-safety.test.mjs` — 46 new tests.
+- `tests/test_write_safety_drift.py` — the drift guard `albanna`'s comment
+  asked for and never had. It reads the frontend's `DESTRUCTIVE_TOOLS` set out
+  of the source and compares it with the Python contract's irreversible tools,
+  so a tool that becomes irreversible is a tool the card starts warning about
+  rather than one that silently destroys data. Negative-tested: marking
+  `edit_file` destructive fails it three ways.
+
+### Fixed
+
+- `submitDecision()` with no input refuses with `no-chat`, not `empty`. An
+  unanswered question about the reader's access is not a yes, and the safe
+  direction to be wrong in is the one that sends nothing.
+
 **Layer 4f — the reader's language, and the labels that carry it.**
 
 - `public/js/lib/i18n.mjs` — `translate()`, the one guard that lets a module

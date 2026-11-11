@@ -23,6 +23,13 @@
  * from `albanna`'s thirteen, and an extension declares its own labels through
  * `EXTENSION_LABELS` rather than through a hardcoded list.
  *
+ * Stage 4g adds the three modules the panel cannot be built without: the
+ * question card, the composer's rules, and the write-safety list. The
+ * destructive list is read from this core's own contract rather than guessed —
+ * `edit_file` declares `mechanism="reverse"` so it is *not* warned about, and
+ * `write_file` declares `mechanism="none"` so it is — and a Python test asserts
+ * the frontend's set and the contract's irreversible set cannot drift.
+ *
  * The shape is the one `albanna` documented at length in its own hooks: a
  * framework-free launcher that asks the server whether the widget should
  * render, places a button and an empty panel on the page, and fetches the
@@ -55,6 +62,26 @@ import {
 } from "./lib/attachments.mjs";
 import { translate } from "./lib/i18n.mjs";
 import { noticeKeys, noticeText } from "./lib/notices.mjs";
+import {
+  PENDING,
+  ANSWERED,
+  answerMessage,
+  canAnswer,
+  questionCard,
+} from "./lib/question.mjs";
+import {
+  DEFAULT_QUESTION_LENGTH,
+  REASONS,
+  refusalText,
+  submitDecision,
+} from "./lib/submit.mjs";
+import {
+  DESTRUCTIVE_TOOLS,
+  declareDestructive,
+  destructiveConsequence,
+  diffValue,
+  isDestructiveTool,
+} from "./lib/write-safety.mjs";
 import {
   describeTool,
   statusLabel,
@@ -93,6 +120,20 @@ export {
   translate,
   noticeKeys,
   noticeText,
+  PENDING,
+  ANSWERED,
+  answerMessage,
+  canAnswer,
+  questionCard,
+  DEFAULT_QUESTION_LENGTH,
+  REASONS,
+  refusalText,
+  submitDecision,
+  DESTRUCTIVE_TOOLS,
+  declareDestructive,
+  destructiveConsequence,
+  diffValue,
+  isDestructiveTool,
   describeTool,
   statusLabel,
   toolAction,
