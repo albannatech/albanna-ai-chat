@@ -7,6 +7,8 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-12
+
 ### Added
 
 **Layer 4h — Vue support in the build, and the panel itself.**
