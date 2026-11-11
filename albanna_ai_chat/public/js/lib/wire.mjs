@@ -16,6 +16,15 @@
 /** The app's name, as Frappe knows it. */
 export const APP_NAME = "albanna_ai_chat";
 
+/**
+ * Where in-flight turns are remembered across a reload.
+ *
+ * Namespaced to this app. `sessionStorage` is per-origin, and a bench serves
+ * several apps from one origin — a key another app also uses is a key two
+ * apps write, and the second one to read it finds turns it did not start.
+ */
+export const INFLIGHT_KEY = "albanna_ai_chat_inflight_turn";
+
 /** The socket.io event the server publishes turn progress on. */
 export const STREAM_EVENT = "albanna_ai_chat_progress";
 

@@ -9,6 +9,67 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4e — the remaining pure frontend modules, consolidated onto one tree.**
+
+Two parallel ports of `albanna`'s side-chat had accumulated: one under
+`public/js/lib/` with tests in `tests/js/`, one under
+`public/js/side-chat/`. They are now one, keeping the union of what each had.
+
+Ported from `albanna` into `lib/`, each with its tests:
+
+- `inflight.mjs` — the turns remembered across a reload. Per *turn*, not per
+  panel: a reader may ask in one thread, move to another, ask again, and come
+  back, and each turn needs its own address. A single slot would have the
+  second turn overwrite the first.
+- `approval.mjs`, `stop.mjs`, `retry.mjs`, `turn-waits.mjs` — the turn
+  lifecycle's decisions, as pure functions.
+- `groups.mjs`, `launcher.mjs`, `recent-questions.mjs`, `voice.mjs`,
+  `window.mjs` — the widget's own logic.
+- `form-button.mjs` — the "Ask Albanna" button on a form. The one Layer B
+  adapter besides `transport.mjs`: it reads `cur_frm` and calls
+  `add_custom_button`. Everything it *decides* comes from `access.mjs`, which
+  is pure.
+
+**The wire contract is now checked from both sides.**
+
+- `tests/js/wire.test.mjs` — the contract module's own invariants: namespaced
+  events and keys, every endpoint served by this app, the envelope reader.
+- `tests/test_wire_contract.py` — the cross-language drift check. `PHASES` is
+  asserted equal to `chat.turn.TurnState`, `ROLES` to `AI Chat Message.role`'s
+  options, and every endpoint in `wire.mjs` to a whitelisted function in
+  `api/chat.py` — in both directions. A list that lives in two languages is a
+  list that disagrees the first time one side is edited.
+- `tests/test_frontend_port.py` — the guard that keeps the port's split
+  honest. A module reaching for `frappe.`, `cur_frm` or `add_custom_button`
+  must be declared in `ADAPTERS`; a pure module must have a test, because a
+  ported module without one was not ported — it was written.
+
+### Changed
+
+- `INFLIGHT_KEY` moved from `inflight.mjs` into `wire.mjs`, where the rest of
+  the contract lives. `albanna` spelled it out inside the module that used it,
+  so a change to it was a change found by reading the whole panel.
+- `public/js/side-chat/` removed. Every module in it was either a duplicate of
+  one in `lib/` or superseded by a richer version — `turn-state.mjs` models
+  seven phases where `state.mjs` modelled two, because a turn that is waiting
+  on a tool call is not the same turn as one that is waiting on a reader.
+
+### Notes
+
+- The purity rule flags `frappe.`, `cur_frm` and `add_custom_button`, and
+  deliberately does *not* flag a guarded `document.` read. `format.mjs` reads
+  `document.documentElement.lang` behind a `typeof` check and falls back to
+  `navigator.language` and then `"en"` — that is feature detection, not
+  coupling, and it is what lets the module be tested in Node. Flagging it
+  would push a pure module into the adapter list for being careful.
+- The old-contract check runs against code with comments stripped, so a
+  provenance note may name what it replaced — `wire.mjs` says `albanna`
+  hard-coded `albanna_chat_progress`, which is the whole reason the constant
+  moved.
+- 448 Python tests and 142 JS tests, all green.
+
+---
+
 **Layer 5a — the chat API, the turn loop, and the provider port.**
 
 The frontend's transport declared a contract in `lib/wire.mjs`; this is the
