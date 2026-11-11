@@ -49,6 +49,7 @@ import types
 from typing import Any
 
 from albanna_ai_chat.core.flow import (
+    CompensationSpec,
     FlowSpec,
     validate_flow_steps_resolve,
 )
@@ -216,11 +217,37 @@ def validate_module(
             )
 
         # --- write tools must say how they are undone -------------------
-        if spec.mutating and spec.flow is None:
-            problems.append(
-                f"write tool {spec.name!r} declares no flow — a mutating tool "
-                "must carry a FlowSpec whose compensation states how it is undone"
-            )
+        # A mutating tool declares compensation in exactly one of two places:
+        # on the spec itself (a single-step write), or through its flow (a
+        # multi-step operation with several things to undo).
+        #
+        # Requiring a *flow* would make every write multi-step, which is the
+        # opposite of the decision this contract was frozen on: single-step
+        # is the default, and a flow is for genuinely transactional
+        # operations only.  ``erpnext-mcp`` ships 451 tools and eleven flows;
+        # a rule that turns all 451 into flows is not that ratio.
+        if spec.mutating:
+            if spec.flow is not None and spec.compensation is not None:
+                problems.append(
+                    f"write tool {spec.name!r} declares compensation both "
+                    "directly and through its flow — pick one, because two "
+                    "answers to 'how is this undone' is the same as none"
+                )
+            elif spec.flow is None and spec.compensation is None:
+                problems.append(
+                    f"write tool {spec.name!r} declares no compensation — a "
+                    "mutating tool must say how it is undone, either on the "
+                    "spec or through a flow"
+                )
+
+        if spec.compensation is not None:
+            if not isinstance(spec.compensation, CompensationSpec):
+                problems.append(
+                    f"tool {spec.name!r} compensation must be a CompensationSpec, "
+                    f"got {type(spec.compensation).__name__}"
+                )
+            else:
+                problems.extend(spec.compensation.problems())
 
         # --- flow -------------------------------------------------------
         if spec.flow is not None:
@@ -268,6 +295,7 @@ def validate_module(
             enabled=spec.enabled,
             source=spec.source or source,
             flow=spec.flow,
+            compensation=spec.compensation,
         )
         for spec in valid
     ]

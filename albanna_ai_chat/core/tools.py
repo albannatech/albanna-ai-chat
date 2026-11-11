@@ -48,6 +48,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+from albanna_ai_chat.core.flow import CompensationSpec
+
 # --------------------------------------------------------------------------
 # Tiers.
 #
@@ -173,6 +175,16 @@ class ToolSpec:
     #: Set when this tool is a multi-step transactional flow rather than a
     #: single call.  See :mod:`albanna_ai_chat.core.flow`.
     flow: Any = None
+    #: How a write is undone, for a *single-step* write.
+    #:
+    #: Required for every mutating tool, and it is the reason a write does
+    #: not have to be a flow.  A flow carries its own compensation (several
+    #: calls, several things to undo); a single-step write declares its undo
+    #: here.  Declaring both is a contradiction — the validator refuses it,
+    #: because two answers to "how is this undone" is the same as none.
+    #:
+    #: ``None`` on a read tool, which undoes nothing.
+    compensation: CompensationSpec | None = None
 
     @property
     def mutating(self) -> bool:
@@ -324,6 +336,7 @@ class ToolRegistry:
                 enabled=enabled.get(spec.name, spec.enabled),
                 source=spec.source,
                 flow=spec.flow,
+                compensation=spec.compensation,
             )
             for spec in self._specs.values()
         )

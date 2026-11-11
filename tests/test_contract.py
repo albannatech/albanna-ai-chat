@@ -305,10 +305,44 @@ def test_flow_step_must_name_a_registered_tool():
         validate_module(module("ext", [write_spec("typo", flow=flow)]))
 
 
-def test_a_write_tool_without_a_flow_is_refused():
-    """A mutating tool must say how it is undone."""
-    with pytest.raises(ContractViolation, match="declares no flow"):
+def test_a_write_tool_without_compensation_is_refused():
+    """A mutating tool must say how it is undone.
+
+    Note what this does *not* require: a flow.  A single-step write declares
+    its compensation on the spec.  Requiring a flow here would make every
+    write multi-step, which is the opposite of the decision this contract was
+    frozen on.
+    """
+    with pytest.raises(ContractViolation, match="declares no compensation"):
         validate_module(module("ext", [spec("bare_write", tier=WRITE)]))
+
+
+def test_a_single_step_write_with_compensation_is_accepted():
+    """Single-step is the default; a flow is for genuinely transactional work."""
+    spec_with_comp = spec(
+        "save_note",
+        tier=WRITE,
+        compensation=CompensationSpec(mechanism="reverse", undo_with=("edit_file",)),
+    )
+    specs = validate_module(module("ext", [spec_with_comp]))
+    assert [s.name for s in specs] == ["save_note"]
+
+
+def test_a_write_may_not_declare_compensation_twice():
+    """Two answers to 'how is this undone' is the same as none."""
+    flow = FlowSpec(
+        name="both_ways",
+        steps=(FlowStep(tool="read_file"), FlowStep(tool="write_file")),
+        compensation=CompensationSpec(mechanism="reverse", undo_with=("edit_file",)),
+    )
+    doubled = spec(
+        "both_ways",
+        tier=WRITE,
+        flow=flow,
+        compensation=CompensationSpec(mechanism="reverse", undo_with=("edit_file",)),
+    )
+    with pytest.raises(ContractViolation, match="both directly and through its flow"):
+        validate_module(module("ext", [doubled]))
 
 
 # --------------------------------------------------------------------------

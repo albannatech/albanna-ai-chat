@@ -3,10 +3,12 @@
 **The `frappe-mcp` core.** A Frappe app that provides the chat runtime, the
 file tools, and the seam every other `-mcp` repo plugs into.
 
-> **Status: Layer 0 complete — contract only.** The contract is frozen and
-> tested (50 tests, plain `pytest`, no bench required). The chat runtime, the
-> file-tool handlers, the Settings activation surface and the frontend port
-> are not built yet. See *Roadmap* below.
+> **Status: Layer 0 complete, Layer 2 contract half complete.**
+> The contract is frozen and tested (90 tests, plain `pytest`, no bench
+> required), and the core's three file tools are declared with their tiers,
+> reach rules and compensation. The Frappe *handlers* behind the port, the
+> chat runtime, the Settings activation surface and the frontend port are not
+> built yet. See *Roadmap* below.
 
 ---
 
@@ -40,11 +42,29 @@ cannot be tested without a site.
 
 - **`tools.py`** — `ToolSpec`, `ToolRegistry`, the closed tier vocabulary
   (`read`, `write`), and the two forbidden-parameter rules as *data*.
+- **`file_tools.py`** — the core's entire built-in surface: `read_file`,
+  `write_file`, `edit_file`, each with its tier, its `write_permission`, and
+  its compensation declaration.
 - **`flow.py`** — `FlowSpec`, `FlowStep`, `CompensationSpec`. A flow is
   several tool calls with a transaction of its own; single-step is the
   default and a flow must declare at least two steps.
+- **`port.py`** — `ToolBackend`, `ToolContext`, `ToolResult`, `Principal`,
+  `PermissionChecker`. How a tool is *called*, without saying what happens
+  next.
 - **`validate.py`** — the atomic extension validator. Every check runs, every
   problem is reported, and nothing is absorbed when any check fails.
+
+### Single-step is the default, and compensation is not optional
+
+A write tool does **not** have to be a flow. It declares how it is undone in
+one of exactly two places — on the spec itself, or through its flow — and
+declaring both is refused, because two answers to "how is this undone" is the
+same as none. `erpnext-mcp` ships 451 tools and eleven flows; a rule that
+turns all of them into flows is not that ratio.
+
+`write_file` is the honest case: the core ships no `delete_file`, so its
+compensation is `none` *with a reason*. `edit_file` is `reverse` — swapping
+`old_string` and `new_string` restores the file exactly.
 
 ### The rules that are not negotiable
 
@@ -82,7 +102,7 @@ its tools and only its tools.
 |---|---|
 | **0 — Contract** | ✅ Frozen and tested |
 | **1 — Chat runtime** | doctypes, providers, streaming, the turn loop |
-| **2 — File-tool handlers** | behind the `ToolBackend` port, Frappe-permissioned |
+| **2 — File tools** | 🔶 Specs + port frozen and tested; Frappe handlers not built |
 | **3 — Extension hook + Settings activation** | install/activate distinction, per-site enable |
 | **4 — Frontend port** | pure logic reused, contract adapters rewritten, build pipeline recovered |
 | **5 — `healthcare-mcp`** | the reference extension, with one real transactional flow |

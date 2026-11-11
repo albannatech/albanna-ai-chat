@@ -10,6 +10,12 @@ independently arrived at: the *contract* lives here, the *handlers* live
 behind a port elsewhere, and a test asserts the two cannot drift.
 """
 
+from albanna_ai_chat.core.file_tools import (
+    CORE_TOOLS,
+    EDIT_FILE,
+    READ_FILE,
+    WRITE_FILE,
+)
 from albanna_ai_chat.core.flow import (
     MECHANISMS,
     MAX_FLOW_STEPS,
@@ -18,6 +24,13 @@ from albanna_ai_chat.core.flow import (
     FlowSpec,
     FlowStep,
     validate_flow_steps_resolve,
+)
+from albanna_ai_chat.core.port import (
+    PermissionChecker,
+    Principal,
+    ToolBackend,
+    ToolContext,
+    ToolResult,
 )
 from albanna_ai_chat.core.tools import (
     CORE_TOOL_NAMES,
@@ -57,6 +70,11 @@ __all__ = [
     "compact_json",
     "truncate_result",
     "validate_arguments",
+    # the core's own tools
+    "CORE_TOOLS",
+    "EDIT_FILE",
+    "READ_FILE",
+    "WRITE_FILE",
     # flow
     "MECHANISMS",
     "MAX_FLOW_STEPS",
@@ -65,6 +83,12 @@ __all__ = [
     "FlowSpec",
     "FlowStep",
     "validate_flow_steps_resolve",
+    # the execution port
+    "PermissionChecker",
+    "Principal",
+    "ToolBackend",
+    "ToolContext",
+    "ToolResult",
     # validate
     "MAX_TOOLS",
     "TIERS_ATTR",
