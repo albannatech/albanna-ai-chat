@@ -9,6 +9,53 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4d — the turn transport, ported and tested.**
+
+- `public/js/lib/transport.mjs` — the socket fast path with the poll as the
+  delivery guarantee. A turn is not a request that returns an answer: it is a
+  request that starts a turn, a stream of progress events, and eventually an
+  answer. Frappe's request model cannot stream a response, so the worker parks
+  the finished answer in the cache and this module reads it back — a client
+  whose socket died still gets its answer, because the poll does not care
+  about the socket.
+- `nextPollDelay()` is the pure half and is tested under plain node, with
+  `now` passed in so the ramp can be tested without waiting for it. Three
+  states, read from what the wait itself has seen: the socket spoke recently
+  (slow down), the socket went quiet (keep the ramp), and the ramp never grows
+  past its cap.
+- `tests/js/transport.test.mjs` — 14 tests.
+
+### Changed
+
+- The Desk entry point imports and re-exports the transport, so the bundle
+  contains it.
+
+### Notes
+
+- The *pattern* is ported from `albanna`'s `turn.mjs` and the reasoning is its
+  reasoning. The *bindings* are not: `albanna` spelled its socket event and its
+  two endpoints out in that file, so a change to either was a change found by
+  reading the whole panel. Here they come from `lib/wire.mjs`.
+- `call()` and `subscribe()` are the only two functions in the frontend that
+  reach for `window.frappe`. Everything else is pure.
+- `translate()` wraps Frappe's `__` and falls back to a pass-through, because
+  the transport is imported by tests that run under plain node where `__` does
+  not exist. A module that throws on import in a test is a module whose pure
+  half cannot be tested.
+
+### Fixed
+
+- Two of the transport's own tests were wrong on arrival and were corrected
+  against the measured behaviour rather than the behaviour assumed:
+  - The geometric-growth assertion compared two ramp values whose ratio the
+    *cap* had already flattened. By `idlePolls=4` the raw ramp is 9830 ms and
+    the cap pulls it to 9000, so a ratio measured there measures the cap. The
+    test now uses counts below the cap, and a separate test documents where the
+    cap engages.
+  - The first poll was asserted to be *patient* (later than the base interval).
+    It is the opposite: `FIRST_POLL_MS` is 1200 against a base of 1500, because
+    the first poll is the one most likely to find an answer already parked.
+
 **Layer 4c — the remaining pure frontend modules, ported and tested.**
 
 - `public/js/lib/access.mjs` — the chat access decision, shared by the

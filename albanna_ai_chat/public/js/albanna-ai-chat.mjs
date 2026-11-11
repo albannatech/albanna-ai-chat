@@ -10,19 +10,26 @@
  * launcher and the form button must share, and the attachment rules checked
  * before the bytes leave the browser.
  *
+ * Stage 4d adds the transport — the socket fast path with the poll as the
+ * delivery guarantee. Its poll ramp is pure and tested under plain node; its
+ * two `window.frappe` calls are the only contract-bound parts, and they read
+ * their event name and endpoints from `lib/wire.mjs` rather than spelling them
+ * out.
+ *
  * The shape is the one `albanna` documented at length in its own hooks: a
  * framework-free launcher that asks the server whether the widget should
  * render, places a button and an empty panel on the page, and fetches the
  * real bundle on the first click. A global hook is paid on every Desk page
  * load, so the framework itself must not be in it.
  *
- * Note what is *not* here: no `frappe` import, no socket, no tool names.
- * Those are the contract-bound adapters, and they are rewritten against this
- * core's own contract rather than copied from `albanna`'s — see `lib/wire.mjs`,
- * which is the one place the frontend's assumptions about the server live.
+ * Note what is *not* here: no `frappe` import, no socket connection, no tool
+ * names. Those are the contract-bound adapters, and they are rewritten against
+ * this core's own contract rather than copied from `albanna`'s — see
+ * `lib/wire.mjs`, which is the one place the frontend's assumptions about the
+ * server live.
  *
- * Still to come: the transport (socket with the poll fallback), the panel
- * itself, and the server endpoints in `lib/wire.mjs` that it calls.
+ * Still to come: the panel itself, and the server endpoints in `lib/wire.mjs`
+ * that the transport calls.
  */
 
 import {
@@ -42,6 +49,15 @@ import {
 } from "./lib/attachments.mjs";
 import { APP_NAME, STREAM_EVENT } from "./lib/wire.mjs";
 import { STATES, initialState } from "./lib/turn-state.mjs";
+import {
+  FIRST_POLL_MS,
+  STATUS_POLL_MAX_MS,
+  call,
+  nextPollDelay,
+  runTurn,
+  subscribe,
+  waitForTurn,
+} from "./lib/transport.mjs";
 
 export {
   APP_NAME,
@@ -59,6 +75,13 @@ export {
   makeAttachment,
   storeAll,
   turnAttachments,
+  FIRST_POLL_MS,
+  STATUS_POLL_MAX_MS,
+  call,
+  nextPollDelay,
+  runTurn,
+  subscribe,
+  waitForTurn,
 };
 
 export const VERSION = "0.1.0";
