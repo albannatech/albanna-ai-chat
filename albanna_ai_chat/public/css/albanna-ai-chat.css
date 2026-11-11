@@ -1,0 +1,54 @@
+/*
+ * The Desk stylesheet — Stage 4a establishes the pipeline, so this is the
+ * minimum that proves the bundle builds, hashes and registers.
+ *
+ * Written with CSS *logical* properties (`inline-start`, `margin-inline`,
+ * `padding-inline`) rather than physical ones (`left`, `margin-left`). That
+ * is what lets one file serve both LTR and RTL without a flipping pass:
+ * `bundled_asset()` prefixes `rtl_` for right-to-left users and looks the
+ * name up in assets-rtl.json, and the build emits that twin from these same
+ * bytes. An Arabic-first product should not need two stylesheets to say the
+ * same thing twice.
+ *
+ * Stage 4b replaces this with the ported panel, drawer and launcher styles.
+ */
+
+.albanna-ai-chat-launcher {
+  position: fixed;
+  inset-block-end: 1rem;
+  inset-inline-end: 1rem;
+  z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color, #d0d0d0);
+  border-radius: 999px;
+  background: var(--card-bg, #ffffff);
+  color: var(--text-color, #1f272e);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.albanna-ai-chat-launcher:hover {
+  background: var(--hover-bg, #f7f7f7);
+}
+
+.albanna-ai-chat-panel {
+  position: fixed;
+  inset-block-end: 4rem;
+  inset-inline-end: 1rem;
+  z-index: 1000;
+  display: none;
+  inline-size: 24rem;
+  max-block-size: 32rem;
+  border: 1px solid var(--border-color, #d0d0d0);
+  border-radius: 0.5rem;
+  background: var(--card-bg, #ffffff);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 12%);
+}
+
+.albanna-ai-chat-panel[data-open="true"] {
+  display: flex;
+  flex-direction: column;
+}

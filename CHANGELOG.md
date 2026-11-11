@@ -9,6 +9,56 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 4a — the frontend build pipeline, written down.**
+
+`albanna` shipped 1.5 MB of built assets in `public/dist/` with no build
+config anywhere in the repository: no `package.json`, no bundler, no script,
+and `public/dist/` gitignored. The output was reproducible only on the machine
+that produced it. This is that machine, as code.
+
+- `build.mjs` — bundles the Desk entry points with esbuild, emits
+  `<name>.bundle.<HASH>.<ext>` into `public/dist/`, clears the previous
+  bundle for that entry, and writes the name → `/assets/...` mapping into
+  `sites/assets/assets.json`. The hash is computed from the bytes actually
+  emitted, so it is content-addressed and a no-change rebuild is a no-change
+  name.
+- `package.json` — esbuild as a declared devDependency, with `build`,
+  `build:check` and `clean` scripts.
+- The RTL twin. `bundled_asset()` prefixes `rtl_` for right-to-left users and
+  looks that up in the merged `assets.json` + `assets-rtl.json`; a missing
+  entry falls through to the literal string and the stylesheet 404s — for
+  Arabic users, who are the primary audience. The build emits and registers
+  the twin every run, and the stylesheet is written with CSS *logical*
+  properties so one file serves both directions.
+- `tests/test_assets_contract.py` — asserts the two rules whose failure is
+  invisible: every declared asset carries `.bundle.` and does not start with
+  `/assets`, and every name in `hooks.py` has a matching entry in `build.mjs`.
+  A bundle the build does not produce is a name that resolves to nothing, and
+  nothing else in the repo notices when the two lists drift.
+- `albanna_ai_chat/public/js/albanna-ai-chat.mjs` and
+  `albanna_ai_chat/public/css/albanna-ai-chat.css` — minimal entry points that
+  prove the pipeline end to end. The real widget is ported behind them in 4b.
+
+### Changed
+
+- `build.mjs` no longer exits when no bench is found. It emits the bundles and
+  warns that `assets.json` was not updated, because a standalone clone or a CI
+  job can still build and inspect them — and an asset Frappe cannot resolve is
+  an asset that does not exist, so the warning says so rather than passing
+  quietly.
+- `.gitignore` now covers `node_modules/` and `package-lock.json`.
+
+### Notes
+
+- Verified end to end: the emitted names resolve to real files under the
+  `sites/assets/<app>` symlink that `bench setup` creates, the rebuild is
+  idempotent, and `--check` exits 1 when the output is stale.
+- The bench's `assets.json` was restored after verification. The app is not
+  installed on this bench, so entries for it would have been inert pollution
+  in a file every app on the bench shares.
+
+---
+
 **Layer 3 — the extension seam, consolidated onto one implementation.**
 
 Two parallel implementations of the extension layer had accumulated (one from

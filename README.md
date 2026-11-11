@@ -106,8 +106,25 @@ its tools and only its tools.
 | **1 — Chat runtime** | ✅ State machine, message model, doctypes, permissions, services |
 | **2 — File tools** | ✅ Specs, port, Frappe handlers and guards — implemented and tested |
 | **3 — Extension seam** | ✅ Hook, atomic validation, activation, Settings API, version compatibility |
-| **4 — Frontend port** | pure logic reused, contract adapters rewritten, build pipeline recovered |
+| **4 — Frontend port** | 🔶 Build pipeline recovered and tested; the widget itself not yet ported |
 | **5 — `healthcare-mcp`** | the reference extension, with one real transactional flow |
+
+### Building the frontend
+
+```bash
+npm install
+npm run build                                  # emit bundles, update assets.json
+FRAPPE_BENCH_ROOT=/path/to/bench npm run build # when the workspace is not inside the bench
+npm run build:check                            # exit 1 if the output is stale (CI)
+```
+
+`app_include_js = ["albanna-ai-chat.bundle.js"]` is not a path. Frappe resolves
+it through `bundled_asset()`, which needs the name to contain `.bundle.`, not
+start with `/assets`, and be present in `sites/assets/assets.json`. The build
+does all three; `tests/test_assets_contract.py` asserts the two lists cannot
+drift. Break the rule and the asset 404s from the site root, the browser logs
+it, and nothing on the page says so — the feature is simply absent, on every
+page, for every user, forever.
 
 ### How a file tool actually runs
 
