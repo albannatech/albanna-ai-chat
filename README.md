@@ -105,7 +105,7 @@ its tools and only its tools.
 | **0 — Contract** | ✅ Frozen and tested |
 | **1 — Chat runtime** | ✅ State machine, message model, doctypes, permissions, services |
 | **2 — File tools** | ✅ Specs, port, Frappe handlers and guards — implemented and tested |
-| **3 — Extension hook + Settings activation** | install/activate distinction, per-site enable |
+| **3 — Extension seam** | ✅ Hook, atomic validation, activation, Settings API, version compatibility |
 | **4 — Frontend port** | pure logic reused, contract adapters rewritten, build pipeline recovered |
 | **5 — `healthcare-mcp`** | the reference extension, with one real transactional flow |
 

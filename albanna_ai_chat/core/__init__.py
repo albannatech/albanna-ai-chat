@@ -10,6 +10,18 @@ independently arrived at: the *contract* lives here, the *handlers* live
 behind a port elsewhere, and a test asserts the two cannot drift.
 """
 
+from albanna_ai_chat.core.extension_state import (
+    ACTIONS,
+    ACTIVE,
+    INSTALLED_INACTIVE,
+    INSTALLED_INCOMPATIBLE,
+    NOT_INSTALLED,
+    UPDATE_AVAILABLE,
+    ExtensionStatus,
+    compare_versions,
+    parse_version,
+    version_satisfies,
+)
 from albanna_ai_chat.core.file_tools import (
     CORE_TOOLS,
     EDIT_FILE,
@@ -43,8 +55,16 @@ from albanna_ai_chat.core.tools import (
     ToolRegistry,
     ToolSpec,
     compact_json,
+    parse_tool_names,
     truncate_result,
+    unknown_tool_names,
     validate_arguments,
+)
+from albanna_ai_chat.core.toolset import (
+    Reach,
+    tools_from,
+    visible_tools,
+    without_source,
 )
 from albanna_ai_chat.core.validate import (
     MAX_TOOLS,
@@ -68,13 +88,31 @@ __all__ = [
     "ToolRegistry",
     "ToolSpec",
     "compact_json",
+    "parse_tool_names",
     "truncate_result",
+    "unknown_tool_names",
     "validate_arguments",
     # the core's own tools
     "CORE_TOOLS",
     "EDIT_FILE",
     "READ_FILE",
     "WRITE_FILE",
+    # extension state
+    "ACTIONS",
+    "ACTIVE",
+    "INSTALLED_INACTIVE",
+    "INSTALLED_INCOMPATIBLE",
+    "NOT_INSTALLED",
+    "UPDATE_AVAILABLE",
+    "ExtensionStatus",
+    "compare_versions",
+    "parse_version",
+    "version_satisfies",
+    # the visibility rule
+    "Reach",
+    "tools_from",
+    "visible_tools",
+    "without_source",
     # flow
     "MECHANISMS",
     "MAX_FLOW_STEPS",

@@ -9,6 +9,74 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Layer 3 — the extension seam, consolidated onto one implementation.**
+
+Two parallel implementations of the extension layer had accumulated (one from
+each of two sessions). They are now one, keeping the union of what each had:
+
+- `core/extension_state.py` — `ExtensionStatus` with five states, including
+  `INSTALLED_INCOMPATIBLE` and `UPDATE_AVAILABLE`, and a small honest semver
+  (`parse_version`, `compare_versions`, `version_satisfies`). An extension
+  declares `REQUIRES_CORE` and is refused activation when the running core
+  does not satisfy it — a visible settings row rather than a runtime surprise.
+- `core/toolset.py` — `Reach`, `visible_tools()`, `without_source()`,
+  `tools_from()`. The visibility rule in one place: a write tool appears when
+  the caller holds the right somewhere, and the operator's list only ever
+  narrows it. Extensions are not a special case.
+- `services/extensions.py` — `discover()`, `load_registry()`,
+  `live_registry()`, `extension_states()`, `activated_apps()`, `core_version()`.
+- `api/extensions.py` — the Settings surface's whitelisted API:
+  `get_report`, `get_tools`, `activate`, `deactivate`, `reload_extensions`.
+  `activate` refuses an app that is not installed and names the bench command
+  that will install it, because a Settings screen cannot install a Frappe app
+  and a button that pretends otherwise will be clicked and then blamed.
+
+### Changed
+
+- `load_registry()` answers *"what is installed and valid"* and
+  `live_registry()` answers *"what a turn is offered"*. They are separate
+  functions rather than one with a flag, because the safe path has to be the
+  obvious one — a loader whose default silently includes unactivated
+  extensions is one careless call site away from exposing tools the operator
+  never switched on.
+- `extension_states()` reports the union of *declared* and *activated* apps,
+  not everything installed. A bench carries `frappe`, `erpnext`, `hrms` and a
+  dozen other apps that are not extensions and never will be; reporting them
+  would bury the two rows an operator came to read.
+
+### Removed
+
+- `core/activation.py`, `extensions.py` and `tests/test_activation.py` — a
+  second, thinner implementation of the same rules. A second copy is a second
+  truth, and the two would have diverged the first time one was edited.
+
+### Notes
+
+- Redis caching of the loaded surface was considered and **not** added.
+  Measured: 1000 re-imports of an already-loaded module cost 0.49 ms, because
+  Python's `sys.modules` already makes a repeated import a dict lookup. The
+  only work re-done per call is validation, which is cheap and *should* re-run
+  — it is the guard. Caching would have added serialization, staleness bugs
+  and invalidation to solve a problem that does not exist.
+- `parse_tool_names` / `unknown_tool_names` live in `core/tools.py` as pure
+  helpers, so the operator's hide-list rule is testable without a doctype.
+  Whitespace separates nothing: `read_file edit_file` is one entry that
+  matches no tool, which is the same silence as a typo.
+- `disabled_tools` was added to `AI Chat Settings`. It narrows the surface
+  regardless of which extension a tool came from, so a *core* tool can be
+  hidden too.
+
+### Fixed
+
+- `load_registry()` loaded every discovered extension with no activation
+  filter, so an installed-but-not-switched-on app's tools would have gone
+  live. `live_registry()` now applies activation, and it is the only loader a
+  turn may call.
+- `extension_states()` initially reported every installed app, including
+  `frappe` and `erpnext`.
+
+### Added
+
 **Layer 1 — the chat runtime.**
 
 - `albanna_ai_chat/chat/message.py` — `Role`, `Message`, `ToolCall`, and the

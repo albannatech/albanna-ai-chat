@@ -177,3 +177,14 @@ def test_the_log_event_vocabulary_is_closed():
     assert "turn_failed" in events
     assert "write_refused" in events
     assert len(events) >= 8
+
+
+def test_the_settings_carry_both_extension_lists():
+    """Activation and the operator's hide-list are different settings.
+
+    One decides which extensions are live; the other narrows the surface
+    regardless of which extension a tool came from.  Conflating them would
+    make it impossible to hide a *core* tool.
+    """
+    names = fieldnames("ai_chat_settings")
+    assert {"enabled_extensions", "disabled_tools"} <= names

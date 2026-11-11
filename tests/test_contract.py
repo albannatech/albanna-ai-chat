@@ -474,3 +474,52 @@ def test_short_results_are_untouched():
 def test_compact_json_is_compact():
     """Every character is paid for twice: request and response."""
     assert compact_json({"a": 1, "b": [2, 3]}) == '{"a":1,"b":[2,3]}'
+
+
+# --------------------------------------------------------------------------
+# The operator's tool list.
+# --------------------------------------------------------------------------
+
+
+from albanna_ai_chat.core import (  # noqa: E402
+    ToolRegistry as _Registry,
+    parse_tool_names,
+    unknown_tool_names,
+)
+
+
+def test_a_comma_separated_list_is_read():
+    assert parse_tool_names("read_file,edit_file") == ("read_file", "edit_file")
+
+
+def test_a_line_per_tool_list_is_read():
+    """An operator hiding twelve tools writes one per line."""
+    assert parse_tool_names("read_file\nedit_file\nwrite_file") == (
+        "read_file",
+        "edit_file",
+        "write_file",
+    )
+
+
+def test_whitespace_separates_nothing():
+    """Two tools on one line is one entry that matches no tool — the same
+    silence as a typo, and the reason the parser refuses to guess."""
+    assert parse_tool_names("read_file edit_file") == ("read_file edit_file",)
+
+
+def test_a_duplicate_name_is_kept_once():
+    assert parse_tool_names("read_file,read_file") == ("read_file",)
+
+
+def test_an_empty_field_yields_nothing():
+    assert parse_tool_names("") == ()
+    assert parse_tool_names(None) == ()
+    assert parse_tool_names("   \n  \n") == ()
+
+
+def test_unknown_names_are_surfaced_rather_than_hiding_nothing():
+    """A name that matches no tool hides nothing, so the one setting whose
+    whole job is to narrow the surface would fail silently."""
+    registry = _Registry([spec("read_file")])
+    assert unknown_tool_names("read_file,typo_tool", registry) == ("typo_tool",)
+    assert unknown_tool_names("read_file", registry) == ()

@@ -99,3 +99,13 @@ class AIChatSettings(Document):
         if not isinstance(parsed, list):
             return ()
         return tuple(str(x) for x in parsed if isinstance(x, str))
+
+    def disabled_tool_names(self) -> tuple[str, ...]:
+        """The tool names the operator has hidden, deduplicated, in order.
+
+        Delegates to the pure parser in :mod:`albanna_ai_chat.core.tools` so
+        the rule is testable without a doctype, a site or a database.
+        """
+        from albanna_ai_chat.core.tools import parse_tool_names
+
+        return parse_tool_names(self.disabled_tools)

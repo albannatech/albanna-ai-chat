@@ -392,3 +392,49 @@ def validate_arguments(spec: ToolSpec, arguments: dict[str, Any]) -> str | None:
         f"Invalid arguments for '{spec.name}' at '{location}': {first.message}. "
         f"Expected: {json.dumps(spec.parameters.get('properties', {}).get(location, {}), default=str)}"
     )
+
+
+def parse_tool_names(raw: str | None) -> tuple[str, ...]:
+    """The operator's list of tool names, in the order they wrote it.
+
+    The settings field is free text: a comma-separated list one way, a line per
+    tool another.  Both are read, because an operator who wants to disable
+    twelve tools writes one per line and an operator who wants to disable one
+    writes it on the same line as nothing else.
+
+    Whitespace separates nothing.  ``read_file edit_file`` is one entry and not
+    two, and the entry matches no tool — which is the point: a list that
+    quietly reads two tools out of one line the operator thought was a list of
+    two is the same silence as a typo.
+
+    A name that appears twice is kept once.  That much is the operator's own
+    business and not a thing to tell them about.
+
+    @param raw: the text from the settings field
+    @returns: the names, deduplicated, in the order they were written
+    """
+    text = str(raw or "")
+    for separator in (",", "\n"):
+        text = text.replace(separator, "\n")
+
+    names: list[str] = []
+    for candidate in text.split("\n"):
+        name = candidate.strip()
+        if name and name not in names:
+            names.append(name)
+    return tuple(names)
+
+
+def unknown_tool_names(raw: str | None, registry: ToolRegistry) -> tuple[str, ...]:
+    """The names in the operator's list that are not registered tools.
+
+    A name that matches no tool hides nothing, so the one setting whose whole
+    job is to narrow what the assistant may do fails silently — the operator
+    believes a tool is disabled and the model still sees it.  Surfacing the
+    unknowns is what turns that silence into a message.
+
+    @param raw: the text from the settings field
+    @param registry: the registry to check against
+    @returns: the names that are not registered, in the order written
+    """
+    return tuple(name for name in parse_tool_names(raw) if name not in registry)

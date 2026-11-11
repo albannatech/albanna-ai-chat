@@ -17,7 +17,8 @@
         "column_break_limits",
         "retention_days",
         "extensions_section",
-        "enabled_extensions"
+        "enabled_extensions",
+        "disabled_tools"
     ],
     "fields": [
         {
@@ -89,6 +90,12 @@
             "fieldname": "enabled_extensions",
             "fieldtype": "Small Text",
             "label": "Enabled Extensions"
+        },
+        {
+            "description": "Tool names to hide from everyone, one per line or comma-separated. This list only ever <em>narrows</em> the surface — it cannot make a tool available that the permission matrix already refuses.",
+            "fieldname": "disabled_tools",
+            "fieldtype": "Small Text",
+            "label": "Disabled Tools"
         }
     ],
     "index_web_pages_for_search": 1,
