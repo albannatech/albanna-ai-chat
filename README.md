@@ -3,13 +3,14 @@
 **The `frappe-mcp` core.** A Frappe app that provides the chat runtime, the
 file tools, and the seam every other `-mcp` repo plugs into.
 
-> **Status: Layer 0 complete, Layer 2 complete.**
-> The contract is frozen and tested (166 tests, plain `pytest`, no bench
-> required), and the core's three file tools are declared *and implemented* —
+> **Status: Layers 0, 1 and 2 complete.**
+> The contract is frozen, the chat runtime's state machine is decided and
+> tested, and the core's three file tools are declared *and implemented* —
 > they read, create and edit File records through Frappe's permission engine,
-> with the site and actor guards that make "Frappe decides" true. The chat
-> runtime, the Settings activation surface and the frontend port are not built
-> yet. See *Roadmap* below.
+> with the site and actor guards that make "Frappe decides" true. 230 tests,
+> plain `pytest`, no bench required. The provider adapters, the turn loop's
+> Frappe service, the Settings activation surface and the frontend port are
+> not built yet. See *Roadmap* below.
 
 ---
 
@@ -102,7 +103,7 @@ its tools and only its tools.
 | Layer | Status |
 |---|---|
 | **0 — Contract** | ✅ Frozen and tested |
-| **1 — Chat runtime** | doctypes, providers, streaming, the turn loop |
+| **1 — Chat runtime** | ✅ State machine, message model, doctypes, permissions, services |
 | **2 — File tools** | ✅ Specs, port, Frappe handlers and guards — implemented and tested |
 | **3 — Extension hook + Settings activation** | install/activate distinction, per-site enable |
 | **4 — Frontend port** | pure logic reused, contract adapters rewritten, build pipeline recovered |
