@@ -3,12 +3,13 @@
 **The `frappe-mcp` core.** A Frappe app that provides the chat runtime, the
 file tools, and the seam every other `-mcp` repo plugs into.
 
-> **Status: Layer 0 complete, Layer 2 contract half complete.**
-> The contract is frozen and tested (90 tests, plain `pytest`, no bench
-> required), and the core's three file tools are declared with their tiers,
-> reach rules and compensation. The Frappe *handlers* behind the port, the
-> chat runtime, the Settings activation surface and the frontend port are not
-> built yet. See *Roadmap* below.
+> **Status: Layer 0 complete, Layer 2 complete.**
+> The contract is frozen and tested (166 tests, plain `pytest`, no bench
+> required), and the core's three file tools are declared *and implemented* —
+> they read, create and edit File records through Frappe's permission engine,
+> with the site and actor guards that make "Frappe decides" true. The chat
+> runtime, the Settings activation surface and the frontend port are not built
+> yet. See *Roadmap* below.
 
 ---
 
@@ -102,10 +103,29 @@ its tools and only its tools.
 |---|---|
 | **0 — Contract** | ✅ Frozen and tested |
 | **1 — Chat runtime** | doctypes, providers, streaming, the turn loop |
-| **2 — File tools** | 🔶 Specs + port frozen and tested; Frappe handlers not built |
+| **2 — File tools** | ✅ Specs, port, Frappe handlers and guards — implemented and tested |
 | **3 — Extension hook + Settings activation** | install/activate distinction, per-site enable |
 | **4 — Frontend port** | pure logic reused, contract adapters rewritten, build pipeline recovered |
 | **5 — `healthcare-mcp`** | the reference extension, with one real transactional flow |
+
+### How a file tool actually runs
+
+`albanna_ai_chat/tools/files.py` is the only module in the app that imports
+Frappe. A call passes three gates before anything is read or written:
+
+1. **Arguments** are validated against the spec's schema, so a malformed call
+   never reaches the site.
+2. **The site** is asserted — a bench serves several sites from one process,
+   and a turn bound to one site must not read another's files.
+3. **The actor** is asserted — `frappe.set_user()` puts the call in the
+   session of the person who asked, because Frappe applies that user's roles
+   and User Permissions to every read and write. A turn running in a
+   background worker has no session user of its own, and running it as
+   Administrator would let the assistant see everything its caller cannot.
+
+Then the reference is resolved — a URL or a File record *name*, never a path —
+and the on-disk location comes from `File.get_full_path()`, which is Frappe's
+answer and never assembled from anything the model supplied.
 
 ## Conventions
 
