@@ -58,8 +58,16 @@ def test_a_list_of_hook_values_is_keyed_by_app(patch_hooks):
     assert extensions.discover() == {"healthcare_mcp": "healthcare_mcp.tools.manifest"}
 
 
-def test_a_dict_of_hooks_is_keyed_by_app(patch_hooks):
-    patch_hooks({"healthcare_mcp": "healthcare_mcp.tools.manifest"})
+def test_a_dict_of_hooks_is_keyed_by_the_dict_key(patch_hooks):
+    # Frappe returns {app: value} for some hooks, and the key *is* the app —
+    # even when the value's first segment is something else entirely.
+    patch_hooks({"a_mcp": "a.tools"})
+    assert extensions.discover() == {"a_mcp": "a.tools"}
+
+
+def test_a_list_of_hook_values_is_keyed_by_the_first_segment(patch_hooks):
+    # A flat list carries no app name, so it is taken from the value.
+    patch_hooks(["healthcare_mcp.tools.manifest"])
     assert extensions.discover() == {"healthcare_mcp": "healthcare_mcp.tools.manifest"}
 
 

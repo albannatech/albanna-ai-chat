@@ -98,13 +98,20 @@ def discover() -> dict[str, str]:
     tools through.
     """
     hooks = frappe.get_hooks(EXTENSION_HOOK, app_name=None) or {}
+    result: dict[str, str] = {}
     if isinstance(hooks, dict):
-        # Frappe returns {app: value} for some hooks and a flat list for
-        # others; both are normalised to the values here.
-        values = [str(v) for v in hooks.values() if v]
+        # Frappe returns {app: value} for some hooks, and the key *is* the app.
+        for app, value in hooks.items():
+            if value:
+                result[str(app)] = str(value)
     else:
-        values = [str(v) for v in hooks if v]
-    return {value.split(".", 1)[0]: value for value in values}
+        # A flat list of values.  The app is the value's first dotted segment,
+        # because the hook's value is always ``<app_name>.<module>``.
+        for value in hooks:
+            if value:
+                value = str(value)
+                result[value.split(".", 1)[0]] = value
+    return result
 
 
 def load_registry(
