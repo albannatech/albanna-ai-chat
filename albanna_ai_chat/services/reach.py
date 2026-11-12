@@ -41,13 +41,21 @@ from albanna_ai_chat.core.toolset import Reach
 
 #: The six Frappe permissions a write tool can be authorised against, and the
 #: DocPerm column each one is stored under.
+#:
+#: The first element is the :class:`~albanna_ai_chat.core.toolset.Reach` field
+#: name, **not** the Frappe permission name.  They differ — ``creatable``
+#: versus ``create`` — and ``reach_for`` splats this mapping straight into
+#: ``Reach(**sets)``, so a permission name here is a ``TypeError`` at the first
+#: call.  That bug shipped: ``reach_for`` had no test that called it, because
+#: the Frappe-free suite cannot call the Frappe half, and it surfaced only
+#: when a real site ran it.
 PERMISSION_COLUMNS: tuple[tuple[str, str], ...] = (
-    ("create", "create"),
-    ("write", "write"),
-    ("submit", "submit"),
-    ("cancel", "cancel"),
-    ("amend", "amend"),
-    ("delete", "delete"),
+    ("creatable", "create"),
+    ("writable", "write"),
+    ("submittable", "submit"),
+    ("cancellable", "cancel"),
+    ("amendable", "amend"),
+    ("deletable", "delete"),
 )
 
 
