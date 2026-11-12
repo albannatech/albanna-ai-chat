@@ -86,14 +86,25 @@ def discover() -> dict[str, str]:
 
     An app that is not installed contributes nothing, which is the scoping
     property the whole design rests on.
+
+    Keyed by the **app name**, and that is load-bearing.  The hook's value is
+    always ``<app_name>.<module>``, so the first dotted segment is the app —
+    and every consumer keys on the app: ``installed`` and ``activated`` are
+    sets of app names, provenance is tagged with the app so an uninstall
+    removes exactly its tools, and activation filtering compares against app
+    names.  Keying by the *value* instead compares a module path against a
+    list of app names, which reports every extension as uninstalled, tags
+    every tool with ``"…​.manifest"``, and lets an unactivated extension's
+    tools through.
     """
     hooks = frappe.get_hooks(EXTENSION_HOOK, app_name=None) or {}
     if isinstance(hooks, dict):
-        # Frappe returns {app: value} when app_name is None.
-        return {str(app): str(value) for app, value in hooks.items() if value}
-    # A single value is a list of one.
-    values = [str(v) for v in hooks if v]
-    return {value: value for value in values}
+        # Frappe returns {app: value} for some hooks and a flat list for
+        # others; both are normalised to the values here.
+        values = [str(v) for v in hooks.values() if v]
+    else:
+        values = [str(v) for v in hooks if v]
+    return {value.split(".", 1)[0]: value for value in values}
 
 
 def load_registry(

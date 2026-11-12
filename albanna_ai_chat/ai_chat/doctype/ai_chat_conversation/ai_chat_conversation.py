@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import frappe
 from frappe.model.document import Document
-from frappe.model.naming import get_default_naming
 
 from albanna_ai_chat.chat.turn import TurnState
 
