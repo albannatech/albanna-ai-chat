@@ -122,6 +122,45 @@ export const PROGRESS = {
 };
 
 /**
+ * The assets.json key the panel bundle is registered under.
+ *
+ * The panel is *not* in `app_include_js`: it is fetched on the first click,
+ * because a global hook is paid on every Desk page load and the framework
+ * must not be in it. The launcher resolves the hashed URL through
+ * `window.frappe.boot.assets_json` under this key — which is exactly the key
+ * `build.mjs` writes, and a test asserts the two spellings agree.
+ *
+ * Note the hyphen: assets.json is keyed by the *bundle* name, which the build
+ * spells `albanna-ai-chat-panel`, and not by `APP_NAME` — which is
+ * `albanna_ai_chat` with an underscore. Deriving the key from the app name
+ * was the first draft of this line, and the drift test caught it: the launcher
+ * would have looked a key up that the build never wrote, and the panel would
+ * have 404'd on every page, silently.
+ */
+export const BUNDLE_BASE = "albanna-ai-chat";
+
+export const PANEL_BUNDLE_KEY = `${BUNDLE_BASE}-panel.bundle.js`;
+
+/**
+ * The global the panel bundle registers its mount function under.
+ *
+ * A classic script injection cannot hand the launcher a module's exports, so
+ * the panel bundle registers itself here and the launcher calls
+ * `window[ALBANNA_PANEL_GLOBAL].mount(el, options)`. The name is this app's
+ * own: two apps on one Desk sharing a global is two apps mounting into each
+ * other's panel.
+ */
+export const ALBANNA_PANEL_GLOBAL = "albannaAiChatPanel";
+
+/**
+ * The id of the root element the launcher places the panel into.
+ *
+ * A second copy on one page is two panels — so the launcher refuses to boot
+ * when the id is already taken, the same way `albanna`'s did.
+ */
+export const ROOT_ID = "albanna-ai-chat-root";
+
+/**
  * Read an envelope out of a response body.
  *
  * @param {*} body the parsed response body

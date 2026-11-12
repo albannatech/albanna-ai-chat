@@ -7,6 +7,50 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+**Stage 4i — the launcher is real: the widget is complete end to end.**
+
+- `albanna-ai-chat.mjs` (the launcher bundle) now boots: it asks the server
+  (`ENDPOINTS.access`) whether the widget should exist, publishes the answer
+  for the form button even when the answer is "no", and only then places a
+  button and an empty panel root on the page. The `shouldRender()` stub that
+  answered yes unconditionally is gone — the server decides, because only it
+  knows the reader's roles.
+- On the first click the launcher resolves the panel's hashed URL from
+  `frappe.boot.assets_json` and injects a classic `<script>` — `albanna`'s own
+  pattern, ported with its reasoning. A URL spelled in code would be right
+  until the first rebuild changed the hash, and then the panel would 404 on
+  every Desk page, silently, forever.
+- `public/js/panel/mount.mjs` — the panel's real entry: registers the mount
+  function on the global `lib/wire.mjs` names, so the two bundles can talk
+  across a script injection. The panel bundle is now built as an **IIFE**,
+  because an ESM script injected without `type="module"` does not execute at
+  all.
+- `lib/wire.mjs` — `PANEL_BUNDLE_KEY`, `ALBANNA_PANEL_GLOBAL`, `ROOT_ID`, and
+  `BUNDLE_BASE`.
+- Four new contract tests and five new JS tests, including two drift guards:
+  the build's assets keys must agree with `wire.mjs`'s spellings, and the
+  mount shim's global must agree with `wire.mjs`'s name.
+
+### Fixed
+
+- **`PANEL_BUNDLE_KEY` was derived from `APP_NAME`, and the build never wrote
+  that key.** assets.json is keyed by the *bundle* name (`albanna-ai-chat`,
+  hyphens) and not by the app name (`albanna_ai_chat`, underscores). The
+  launcher would have looked up `albanna_ai_chat-panel.bundle.js`, found
+  nothing, and the panel would have failed to load on every Desk page — the
+  drift test written in the same commit caught it before it shipped. Now
+  spelled from `BUNDLE_BASE`, and a Python test asserts the derivation.
+
+### Notes
+
+- The launcher's boot is guarded on `typeof document`, so the same file is
+  importable under plain node by the tests and executable in the browser.
+- A failed boot (no `frappe`, an unreachable access endpoint) publishes
+  `publishAccess(null)` before returning, so a form button that waits for an
+  answer is not left waiting for a decision that has already been made.
+
 ## [0.4.0] — 2026-11-12
 
 ### Added

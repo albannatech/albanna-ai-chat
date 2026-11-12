@@ -30,19 +30,18 @@
  * `write_file` declares `mechanism="none"` so it is — and a Python test asserts
  * the frontend's set and the contract's irreversible set cannot drift.
  *
- * The shape is the one `albanna` documented at length in its own hooks: a
- * framework-free launcher that asks the server whether the widget should
- * render, places a button and an empty panel on the page, and fetches the
- * real bundle on the first click. A global hook is paid on every Desk page
- * load, so the framework itself must not be in it.
+ * Stage 4i makes the launcher *real*: it asks the server whether the widget
+ * should render, places a button and an empty panel on the page, and fetches
+ * the panel bundle on the first click — resolving the hashed URL from
+ * `frappe.boot.assets_json` and injecting a classic `<script>`, which is
+ * `albanna`'s own pattern. What is left in this file is state, wiring and DOM;
+ * the rules live in `lib/`.
  *
  * Note what is *not* here: no `frappe` import, no socket connection, no tool
  * names. Those are the contract-bound adapters, and they are rewritten against
  * this core's own contract rather than copied from `albanna`'s — see
  * `lib/wire.mjs`, which is the one place the frontend's assumptions about the
  * server live.
- *
- * Still to come: the panel itself.
  */
 
 import {
@@ -89,7 +88,14 @@ import {
   toolLabel,
   toolSummary,
 } from "./lib/tool-labels.mjs";
-import { APP_NAME, STREAM_EVENT } from "./lib/wire.mjs";
+import {
+  ALBANNA_PANEL_GLOBAL,
+  APP_NAME,
+  ENDPOINTS,
+  PANEL_BUNDLE_KEY,
+  ROOT_ID,
+  STREAM_EVENT,
+} from "./lib/wire.mjs";
 import { STATES, initialState } from "./lib/turn-state.mjs";
 import {
   FIRST_POLL_MS,
@@ -150,21 +156,159 @@ export {
 
 export const VERSION = "0.1.0";
 
+// --------------------------------------------------------------------------
+// Resolving the panel's URL.
+//
+// The panel is fetched on demand, and the URL it is fetched from is the one
+// the build wrote into assets.json. A URL spelled out here would be right
+// until the first rebuild changed the hash — and then the panel would 404 on
+// every page, silently, forever. So it is read from boot, which Frappe
+// refreshes with the assets map on every page load.
+// --------------------------------------------------------------------------
+
 /**
- * Whether the widget should render for this page.
+ * The panel's URL, from the assets map Frappe hands the page.
  *
- * A stub for now — it answers yes so the pipeline can be exercised end to
- * end. The real answer comes from the server, because only the server knows
- * the reader's roles, and a reader who may not chat gets no widget at all.
+ * Pure, and tested under plain node: the failure it is written for is a build
+ * that emitted the bundle but never registered it, which is a panel that
+ * 404s silently. A missing entry answers `null` and the caller paints an
+ * error naming the command that fixes it — rather than injecting a script
+ * tag that loads the site's 404 page as JavaScript.
+ *
+ * @param {object} assets the `frappe.boot.assets_json` map
+ * @returns {string|null} the bundle's URL, or null when it is not registered
  */
-export function shouldRender() {
-  return true;
+export function panelBundleUrl(assets) {
+  const map = assets && typeof assets === "object" ? assets : {};
+  const url = map[PANEL_BUNDLE_KEY];
+  return typeof url === "string" && url ? url : null;
 }
 
-if (typeof document !== "undefined" && shouldRender()) {
-  document.dispatchEvent(
-    new CustomEvent("albanna-ai-chat:ready", {
-      detail: { app: APP_NAME, version: VERSION, phases: STATES },
-    }),
+// --------------------------------------------------------------------------
+// The boot.
+//
+// This is the DOM-coupled half, and it is the reason the pure half exists:
+// everything above `boot` is testable without a browser, and what is here is
+// only placement and wiring.
+// --------------------------------------------------------------------------
+
+function paintBootError(el) {
+  el.innerHTML = "";
+  const box = document.createElement("div");
+  box.className = "albanna-ai-chat-boot-error";
+  box.setAttribute("role", "alert");
+  box.textContent = translate(
+    "The assistant panel could not load. Run: bench build --app albanna_ai_chat",
   );
+  el.appendChild(box);
+}
+
+/** Inject the panel bundle once, then mount it into *root*. */
+function loadPanel(root) {
+  const already = window[ALBANNA_PANEL_GLOBAL];
+  if (already && typeof already.mount === "function") {
+    already.mount(root);
+    return;
+  }
+
+  const url = panelBundleUrl(
+    (window.frappe && window.frappe.boot && window.frappe.boot.assets_json) || {},
+  );
+  if (!url) {
+    // A missing registration is a build that never ran, not a network
+    // failure — so the message names the command rather than a retry button.
+    paintBootError(root);
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.src = url;
+  script.onload = () => {
+    const panel = window[ALBANNA_PANEL_GLOBAL];
+    if (panel && typeof panel.mount === "function") {
+      panel.mount(root);
+    } else {
+      paintBootError(root);
+    }
+  };
+  script.onerror = () => paintBootError(root);
+  document.head.appendChild(script);
+}
+
+/** Ask the server whether the widget should exist, and place it if so. */
+export async function boot() {
+  if (typeof document === "undefined" || !document.body) return;
+  if (typeof window.frappe === "undefined") return;
+  if (document.getElementById(ROOT_ID)) return;
+
+  const root = document.createElement("div");
+  root.id = ROOT_ID;
+  root.className = "albanna-ai-chat-panel";
+
+  let config = null;
+  try {
+    const result = await window.frappe.call({
+      method: ENDPOINTS.access,
+      args: {},
+      silent: true,
+    });
+    config = result && typeof result.message === "object" ? result.message : null;
+  } catch (error) {
+    // The answer did not arrive, so there is no widget — and the bundles
+    // that wait for one are told so, rather than left waiting for a
+    // decision that has already been made.
+    publishAccess(null, { window, document });
+    if (window.console && window.console.warn) {
+      window.console.warn("albanna-ai-chat: unavailable", error);
+    }
+    return;
+  }
+
+  // Published before the early return below: "no widget" is an answer too.
+  publishAccess(config, { window, document });
+
+  if (!config || config.visible !== true) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "albanna-ai-chat-launcher";
+  button.textContent = translate("Ask Albanna AI");
+  button.setAttribute("aria-expanded", "false");
+
+  button.addEventListener("click", () => {
+    const open = root.getAttribute("data-open") === "true";
+    if (!open && !window[ALBANNA_PANEL_GLOBAL]) {
+      // The first click pays for the framework. The attribute is set by the
+      // panel's own mount, so the button only records the intent.
+      button.setAttribute("aria-expanded", "true");
+      loadPanel(root);
+      return;
+    }
+    root.setAttribute("data-open", open ? "false" : "true");
+    button.setAttribute("aria-expanded", open ? "false" : "true");
+  });
+
+  document.body.appendChild(root);
+  document.body.appendChild(button);
+}
+
+// The bundle is included on every Desk page. Under plain node — where the
+// tests import the pure half — there is no document, so the guard is what
+// makes the same file safe in both places.
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      boot().catch((error) => {
+        if (window.console && window.console.warn) {
+          window.console.warn("albanna-ai-chat: boot failed", error);
+        }
+      });
+    });
+  } else {
+    boot().catch((error) => {
+      if (window.console && window.console.warn) {
+        window.console.warn("albanna-ai-chat: boot failed", error);
+      }
+    });
+  }
 }

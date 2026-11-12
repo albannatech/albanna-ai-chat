@@ -218,3 +218,86 @@ def test_every_class_the_panel_uses_is_answered_by_the_stylesheet():
 
     missing = sorted(name for name in used if f".{name}" not in css)
     assert not missing, f"classes used by the panel with no rule in the stylesheet: {missing}"
+
+
+# --------------------------------------------------------------------------
+# The launcher resolves the panel from assets.json — and that is one fact
+# written down twice, once by the build and once by `lib/wire.mjs`. Two
+# copies of one fact drift, and the drift is silent: the launcher looks a key
+# up that the build never wrote, the panel 404s on every Desk page, and
+# nothing on the page says why.
+# --------------------------------------------------------------------------
+
+WIRE = PUBLIC / "js" / "lib" / "wire.mjs"
+
+
+def test_the_builds_assets_keys_agree_with_the_wire_keys():
+    """Every bundle the build registers, `wire.mjs` names under the same key."""
+    import albanna_ai_chat.public  # noqa: F401 — package exists
+
+    build_text = BUILD.read_text()
+    # The entry names are the only source of the assets.json keys.
+    entry_names = set(re.findall(r'name:\s*"([^"]+)"', build_text))
+    wire_text = WIRE.read_text()
+
+    assert "albanna-ai-chat" in entry_names
+    assert "albanna-ai-chat-panel" in entry_names, "the panel has no build entry"
+
+    # `PANEL_BUNDLE_KEY` must be spelled from the bundle base, not from
+    # APP_NAME — the underscore/hyphen split is the drift this test exists
+    # for, and it was caught by it once already.
+    assert '`${BUNDLE_BASE}-panel.bundle.js`' in wire_text, (
+        "PANEL_BUNDLE_KEY is not derived from BUNDLE_BASE"
+    )
+    assert 'BUNDLE_BASE = "albanna-ai-chat"' in wire_text, (
+        "BUNDLE_BASE does not name the build's bundle base"
+    )
+
+
+def test_the_launcher_never_hardcodes_a_panel_url():
+    """A URL spelled in code is right until the first rebuild changes the hash.
+
+    After that the panel 404s on every Desk page, silently, forever. The URL
+    must come from `frappe.boot.assets_json`, which Frappe refreshes on every
+    page load.
+    """
+    entry = (PUBLIC / "js" / "albanna-ai-chat.mjs").read_text()
+    # No literal dist path, and the resolution goes through boot's assets map.
+    assert "/dist/" not in entry, "the launcher spells a dist path — it will go stale"
+    assert "assets_json" in entry, "the launcher does not read the assets map"
+    assert "panelBundleUrl" in entry
+
+
+def test_the_panel_bundle_is_an_iife_the_launcher_can_inject():
+    """An ESM script injected without `type="module"` does not execute at all.
+
+    The panel is fetched by injecting a classic `<script>` tag, so the bundle
+    must be an IIFE that registers its mount function on the global named in
+    `lib/wire.mjs` — which is what makes the two bundles able to talk.
+    """
+    build_text = BUILD.read_text()
+    assert 'iife: true' in build_text, "the panel entry is not built as an IIFE"
+    assert 'entry.iife ? "iife" : "esm"' in build_text, (
+        "the build does not honour the per-entry format"
+    )
+
+    mount = (PUBLIC / "js" / "panel" / "mount.mjs").read_text()
+    wire_text = WIRE.read_text()
+    match = re.search(r'ALBANNA_PANEL_GLOBAL\s*=\s*"([^"]+)"', wire_text)
+    assert match, "wire.mjs does not name the mount global"
+    assert match.group(1) in mount, (
+        "the mount shim registers a global that does not match wire.mjs"
+    )
+
+
+def test_the_launcher_asks_the_server_instead_of_guessing_visibility():
+    """A reader who may not chat gets no widget at all — not a disabled one.
+
+    The old `shouldRender()` stub answered yes unconditionally, which is the
+    answer the *server* is supposed to give, because only it knows the
+    reader's roles.
+    """
+    entry = (PUBLIC / "js" / "albanna-ai-chat.mjs").read_text()
+    assert "shouldRender" not in entry, "the visibility stub is still in the launcher"
+    assert "ENDPOINTS.access" in entry, "the launcher does not ask the server"
+    assert "publishAccess" in entry, "the launcher does not publish the answer"

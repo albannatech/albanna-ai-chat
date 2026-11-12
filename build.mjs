@@ -66,7 +66,18 @@ const ENTRIES = [
   // global hook is paid on every Desk page load, so the framework itself must
   // not be in it. The launcher asks the server whether the widget should
   // render, places a button and an empty panel, and fetches this on demand.
-  { name: "albanna-ai-chat-panel", kind: "js", from: "js/panel/SideChat.vue" },
+  //
+  // The entry is the *mount shim*, not the component: the launcher injects a
+  // classic `<script>`, and a classic script cannot receive a module's
+  // exports. So the shim registers the mount function on the global named in
+  // `lib/wire.mjs`, and the bundle is emitted as an IIFE — an ESM script
+  // injected without `type="module"` does not execute at all.
+  {
+    name: "albanna-ai-chat-panel",
+    kind: "js",
+    from: "js/panel/mount.mjs",
+    iife: true,
+  },
 ];
 
 const args = new Set(process.argv.slice(2));
@@ -262,7 +273,9 @@ async function buildOne(entry) {
     minify: !args.has("--no-minify"),
     sourcemap: true,
     target: ["es2020"],
-    format: "esm",
+    // IIFE for the panel, because a classic `<script>` injection is how the
+    // launcher loads it; ESM everywhere else.
+    format: entry.iife ? "iife" : "esm",
     write: false,
     logLevel: "silent",
     plugins: [vuePlugin()],
