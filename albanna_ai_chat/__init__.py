@@ -3,4 +3,4 @@
 A Frappe app: chat runtime, file tools, and the extension seam.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

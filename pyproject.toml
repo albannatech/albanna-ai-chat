@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "albanna-ai-chat"
-version = "0.3.0"
+version = "0.4.0"
 description = "Albanna AI Chat — the frappe-mcp core: chat runtime, file tools, and the extension seam."
 readme = "README.md"
 requires-python = ">=3.10"

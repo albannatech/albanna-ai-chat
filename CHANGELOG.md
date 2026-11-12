@@ -7,6 +7,42 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-11-12
+
+### Added
+
+**Layer 8 — the portfolio is installable, and a test keeps it that way.**
+
+- `tests/test_portfolio_structure.py` — walks every sibling repo and asserts
+  the structure Frappe needs: the module `__init__.py`, the doctype package
+  `__init__.py`, a `<doctype>.py` controller in every doctype directory, a
+  `frappe_mcp_tools` hook whose target exists, no `required_apps`, an explicit
+  core check in `install.py`, a declared `REQUIRES_CORE`, and a `pyproject`
+  version that matches the package. ~200 assertions across 24 repos.
+- `tests/test_discover_keys_by_app.py`, `tests/test_reach_columns.py` —
+  regression tests for the two loader bugs below.
+
+### Fixed
+
+Four bugs that only a real site could find, because each lives in the Frappe
+half and the Frappe-free suite validates the manifest:
+
+- **`discover()` keyed by the hook's *value*, not the *app*.** Frappe returns
+  a flat list for most hooks, and the list branch keyed discovery by the
+  module path while every consumer keys on the app. One wrong key, three
+  silent consequences: every extension reported as not installed, every tool
+  tagged `"...manifest"` so an uninstall removed nothing, and `only_activated`
+  unable to filter so an unactivated extension's tools reached the model.
+- **`PERMISSION_COLUMNS` named permissions, not `Reach` fields.** `reach_for`
+  splats the mapping into `Reach(**sets)`, so `create` where `creatable` was
+  expected raised `TypeError`. The function had never run successfully — no
+  test called it, because the Frappe-free suite cannot call the Frappe half.
+- **An unused `get_default_naming` import** that does not exist in Frappe v16
+  (the helper is `get_default_naming_series`), breaking install.
+- **`install.py` damaged by a portfolio patch script** that ran over the core
+  as well as the extensions, rewriting `CHAT_USER_ROLE` and leaving
+  `_require_core` referencing a name that does not exist.
+
 ## [0.3.0] — 2026-11-12
 
 ### Added
