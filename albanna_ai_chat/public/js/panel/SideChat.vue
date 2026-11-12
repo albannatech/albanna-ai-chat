@@ -71,6 +71,9 @@ import {
 } from "../lib/turn-state.mjs";
 import { call, runTurn, subscribe } from "../lib/transport.mjs";
 import { serverMessage } from "../lib/errors.mjs";
+import { pageIdentity, resolveContext } from "../lib/context.mjs";
+import { examplesFor } from "../lib/examples.mjs";
+import { ROUTE_EVENT, watchRoute } from "../lib/page.mjs";
 
 // --------------------------------------------------------------------------
 // State.
@@ -87,10 +90,17 @@ const pendingApproval = ref(null);
 const pendingQuestion = ref(null);
 const inflightTools = ref([]);
 const unsubscribe = ref(() => {});
+// What the reader is looking at — `lib/context.mjs` describes it, and it
+// travels with every turn so the server knows where the question came from.
+const page = ref(null);
+const unwatchRoute = ref(() => {});
 
 const busy = computed(() => state.value.phase !== IDLE && state.value.phase !== DONE);
 const waiting = computed(() => isWaitingOnReader(state.value));
 const statusText = computed(() => statusLabel(state.value.phase));
+// The empty state's suggestions follow the page: a form asks about that
+// document, a list about the list. Nothing to anchor on falls back.
+const suggestions = computed(() => examplesFor(page.value, page.value?.rows || 0));
 
 // --------------------------------------------------------------------------
 // The composer.
@@ -131,6 +141,12 @@ async function send() {
     const payload = await runTurn({
       question: decision.question,
       conversationId: conversationId.value,
+      // The page the question came from: the identity scopes the
+      // conversation, the description tells the model where the reader
+      // is. The server re-reads whatever it needs and treats this as
+      // untrusted — a wrong answer here costs relevance, never truth.
+      page: pageIdentity(page.value || {}),
+      pageContext: page.value || {},
       onEvent: onProgress,
       onQueued: (streamId) => {
         // The stream id is the turn's address on the server, and the panel
@@ -293,11 +309,26 @@ onMounted(() => {
   if (conversationId.value) {
     unsubscribe.value = subscribe(conversationId.value, onProgress);
   }
+  // The page is watched from the moment the panel opens: the Desk is a
+  // single-page application, so a navigation is a "change" event on the
+  // router, and a panel that missed it would keep answering about the
+  // page the reader has already left.
+  page.value = resolveContext();
+  unwatchRoute.value = watchRoute(() => {
+    page.value = resolveContext();
+  });
 });
 
 onBeforeUnmount(() => {
   unsubscribe.value();
+  unwatchRoute.value();
 });
+
+/** A suggestion fills the composer — the reader still asks. */
+function pickSuggestion(question) {
+  draft.value = question;
+  composerProblem.value = "";
+}
 
 // Exposed for the launcher, which mounts this panel on the first click.
 defineExpose({ state, send, stop, conversationId });
@@ -323,6 +354,22 @@ defineExpose({ state, send, stop, conversationId });
           {{ toolSummary(message) }}
         </div>
       </div>
+    </div>
+
+    <!-- The empty state's suggestions follow the page the reader is on. -->
+    <div
+      v-if="!state.messages.length && suggestions.length"
+      class="albanna-ai-chat-panel__suggestions"
+    >
+      <button
+        v-for="question in suggestions"
+        :key="question"
+        class="albanna-ai-chat-panel__suggestion"
+        type="button"
+        @click="pickSuggestion(question)"
+      >
+        {{ question }}
+      </button>
     </div>
 
     <!-- A question is a choice the assistant cannot make. -->

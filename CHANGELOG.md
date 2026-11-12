@@ -9,6 +9,42 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Stage 7 — the panel knows what page it is on.**
+
+Five pure modules ported from the reference, and the panel wired to use them:
+
+- `lib/context.mjs` — what the widget knows about the page. The rule the
+  reference learned the hard way is kept verbatim: **the route decides which
+  live object may be read** — `cur_frm` and `cur_list` outlive the page the
+  reader walked away from, and a widget that trusts them describes a page
+  the reader has already left. The normalisers (route classifier, filter
+  and column describers, page identity) are pure and tested under plain
+  node; the three readers take an injected env, so the tests drive a fake
+  Desk.
+- `lib/examples.mjs` — the empty state's suggestions follow the page: a
+  form asks about *that* document, a list about the list it shows, a
+  report about the report. An empty list offers to create, not to count.
+  "my" is never used in the generic set — the assistant cannot know who
+  that is.
+- `lib/export.mjs` — the transcript as a Markdown file; tool rows are
+  plumbing, not speech, and a message with no content still gets its
+  speaker line.
+- `lib/nudge.mjs` — the live hint names the documents it counts, and the
+  "and {0} more" line says nothing when nothing was left out.
+- `lib/page.mjs` — the route watcher. The event is `"change"`, the only
+  one the Desk's router fires; a listener for "route-change" is a listener
+  for something that never happens, and the reference widget had one.
+- The panel now carries the page context with every turn (`page` +
+  `page_context`, which `start_turn` has taken all along), watches the
+  route while open, and offers the page's suggestions in the empty state —
+  a suggestion fills the composer; the reader still asks.
+- `tests/test_frontend_port.py` — `context.mjs` and `page.mjs` are declared
+  Layer B adapters: they read Desk state through an injected env, so their
+  pure halves stay testable under plain node, and the declaration is the
+  guard's own mechanism for saying so.
+
+62 new JS tests. 882 Python + 290 JS, all passing.
+
 **Stage 6 — the flow runner: a multi-step tool is a transaction.**
 
 - `core/flow_plan.py` — the pure half: placeholder resolution, step-argument

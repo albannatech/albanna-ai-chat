@@ -36,6 +36,12 @@ JS_TESTS = ROOT / "tests" / "js"
 ADAPTERS = {
     "form-button.mjs",  # reads cur_frm, calls add_custom_button
     "transport.mjs",  # reaches for window.frappe to call and subscribe
+    # Both read the Desk through an *injected env*, never the bare globals —
+    # that is what lets their pure halves (the normalisers, the watcher's
+    # unsubscribe) still be tested under plain node. They are adapters
+    # because what they read is Desk state, which no other Desk could give.
+    "context.mjs",  # reads frappe.get_route, cur_frm, cur_list, query_report
+    "page.mjs",  # reaches the Desk's router to watch the route
 }
 
 #: `albanna`'s contract strings, which must not survive the port.
