@@ -9,6 +9,60 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Stage 5 — real providers: OpenAI and Anthropic over plain HTTP.**
+
+- `providers/` — the implementations behind
+  `services/turn_loop._provider()`, which used to refuse every configured
+  name with "no implementation is installed for it yet". Each provider is
+  two halves: a **pure** translation (canonical `Message` objects into the
+  provider's wire shape and back) tested under plain pytest, and a thin
+  **transport** (one HTTP call) that maps every way the network can fail
+  into a `ProviderResponse` — nothing raises.
+- `providers/http.py` — the shared transport. Errors are responses, not
+  exceptions: a 401/402/403/429 is `REFUSED` (configuration, no retry
+  helps), a timeout/5xx is `ERROR` (an outage, may be retried). The
+  provider's own `{"error": {"message": …}}` sentence is kept; a 404 page's
+  HTML is not rendered into a chat bubble.
+- `providers/openai_provider.py` — the canonical wire form is already
+  OpenAI-shaped, so this is mostly assembly; `from_response` tolerates a
+  missing/`None` `tool_calls` field and re-parses the JSON-string argument
+  payload.
+- `providers/anthropic_provider.py` — the structural translation: the
+  system message lifted to the top level (a `system` role inside
+  `messages` is a 400), tool results re-parented as *user* messages
+  carrying `tool_result` blocks (Anthropic has no tool role), and the
+  required `max_tokens`. An assistant turn that paused without saying
+  anything is sent as an empty text block rather than an empty content
+  list, which the API refuses.
+- `providers/registry.py` — the configured name becomes a working
+  provider, and every way a site can be unconfigured becomes a refusal
+  naming the line that fixes it: no provider → "set a default provider in
+  Settings"; unknown name → "installed providers: …"; no model → refuse
+  rather than guess (a guessed model is a bill the operator did not
+  authorise); no key → name the site config line.
+- `default_provider` in AI Chat Settings is now a **Select** with the two
+  shipped names, and its description says where the key goes.
+- 45 new tests (30 provider + 8 registry + transport mapping).
+
+### Changed
+
+- **API keys live in `site_config.json` as `ai_chat_<provider>_key`, never
+  in a doctype field.** A field puts the key in every backup, every log
+  line that renders the document, and every fixture a developer exports.
+  An optional `ai_chat_<provider>_base_url` override supports a proxy or a
+  compatible endpoint.
+
+### Notes
+
+- The transport seam is `http.post(url, headers, payload) -> (response,
+  body)`, so no test ever touches the network and a provider class is
+  twenty lines.
+- The core uses plain `requests`, which Frappe already ships — not the
+  `anthropic`/`openai` SDKs, which are in `core.jobs.PROVIDER_MODULES` for
+  *extensions*. An SDK is a second dependency tree that pins its own
+  `httpx`; the wire formats are stable and small, and writing them down is
+  what makes them auditable.
+
 **Stage 4i — the launcher is real: the widget is complete end to end.**
 
 - `albanna-ai-chat.mjs` (the launcher bundle) now boots: it asks the server

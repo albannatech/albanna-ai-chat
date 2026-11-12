@@ -27,10 +27,11 @@
             "label": "Provider"
         },
         {
-            "description": "Which provider new conversations use by default.",
+            "description": "Which provider new conversations use by default. The key itself goes in site_config.json as ai_chat_<provider>_key — never in a field here, which would put it in every backup and every exported fixture.",
             "fieldname": "default_provider",
-            "fieldtype": "Data",
-            "label": "Default Provider"
+            "fieldtype": "Select",
+            "label": "Default Provider",
+            "options": "openai\nanthropic"
         },
         {
             "description": "Which model new conversations use by default.",

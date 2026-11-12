@@ -228,18 +228,11 @@ def _provider():
     """
     try:
         settings = frappe.get_single("AI Chat Settings")
-        provider_name = (settings.default_provider or "").strip()
-        if not provider_name:
-            return NullProvider()
     except Exception:  # noqa: BLE001
         return NullProvider()
-    # No provider implementation ships in this layer yet, so a configured name
-    # still refuses — but it refuses naming what is missing, which is the
-    # difference between a sentence an operator can act on and a 500.
-    return NullProvider(
-        f"Provider {provider_name!r} is configured but no implementation is "
-        "installed for it yet."
-    )
+    from albanna_ai_chat.providers.registry import provider_for
+
+    return provider_for(settings.default_provider, settings.default_model)
 
 
 # --------------------------------------------------------------------------
