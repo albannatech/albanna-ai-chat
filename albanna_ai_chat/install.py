@@ -19,7 +19,8 @@ from albanna_ai_chat.ai_chat.doctype.ai_chat_settings.ai_chat_settings import (
 )
 
 #: The role the permission hooks and the doctype permissions both depend on.
-CHAT_USER_ROLE = "Albanna Chat User"
+CHAT_USER_CORE_APP = "albanna_ai_chat"
+ROLE = "Albanna Chat User"
 
 
 def _ensure_role() -> None:
@@ -57,6 +58,7 @@ def _ensure_settings() -> None:
 
 
 def after_install() -> None:
+    _require_core()
     """Called by Frappe after the app is installed on a site."""
     _ensure_role()
     _ensure_settings()
@@ -68,5 +70,22 @@ def after_migrate() -> None:
     Idempotent, so a site that arrives with tables but no settings row is
     repaired by the next migrate rather than by a support ticket.
     """
+    _require_core()
     _ensure_role()
     _ensure_settings()
+
+
+def _require_core() -> None:
+    """Refuse to install without the core, and say which app to install.
+
+    A raised exception here fails the install, which is correct: an extension
+    whose tools cannot be discovered is not an extension, it is a directory.
+    """
+    if CORE_APP in frappe.get_installed_apps():
+        return
+    frappe.throw(
+        f"This extension requires the frappe-mcp core. Install it first: "
+        f"bench get-app https://github.com/albannatech/albanna-ai-chat.git "
+        f"&& bench --site {{site}} install-app {{CORE_APP}}",
+        title="Missing required app",
+    )
