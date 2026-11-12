@@ -9,6 +9,44 @@ and the app uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+**Stage 6 — the flow runner: a multi-step tool is a transaction.**
+
+- `core/flow_plan.py` — the pure half: placeholder resolution, step-argument
+  assembly, output wiring between steps, undo-argument narrowing, and the
+  summary format. Every answer is a value or a sentence the model can be
+  shown, never an exception — a flow that half-ran is exactly where a raised
+  exception is least helpful.
+- `services/flow_runner.py` — the Frappe half: expand, run each step through
+  the same `_run_tool` a single call takes (same validation, same authority,
+  same backend — a flow is not a bypass), and on the first failure undo the
+  completed steps **in reverse** through each step's own declared
+  `undo_with`.
+- `FlowStep.into` — the argument the wired output lands in. The old shape
+  injected the value under the field's own name, which a closed schema
+  (`additionalProperties: False`) refuses: the encounter step would have
+  failed with *invalid arguments* the moment it ran. A step now names the
+  declared parameter its input lands in, and `FlowSpec.problems()` refuses a
+  `from_step` without one.
+- `admit_patient` (healthcare-mcp) now wires `patient ← create_patient` and
+  `encounter ← create_encounter` through `into`, so the encounter belongs to
+  the patient record that actually exists — not to the caller's text.
+
+### The transaction's rules, as tested
+
+- A failing step undoes the completed ones in reverse order, addressed to
+  what this flow itself created (`delete_patient` gets the name step 0
+  returned, not a guess).
+- A failing **undo** is reported under `NOT UNDONE` with the reason — a
+  compensation that quietly gives up is worse than none.
+- A step with no declared undo is named, never silently skipped.
+- A failing first step runs no undo at all — an undo of nothing is a write.
+- An unresolvable placeholder or a `into` naming an undeclared parameter
+  refuses **before anything runs**.
+- The turn loop sends a flow spec to the runner in `_run_tool`; the branch
+  is asserted as source, since it cannot be exercised without a site.
+
+45 new tests across both halves. 874 Python + 227 JS, all passing.
+
 **Stage 5 — real providers: OpenAI and Anthropic over plain HTTP.**
 
 - `providers/` — the implementations behind

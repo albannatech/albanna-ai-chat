@@ -81,6 +81,12 @@ class FlowStep:
     from_step: int | None = None
     #: The field of that output to take.
     from_field: str = ""
+    #: The argument of *this step's tool* that the wired output is injected
+    #: into. Required in practice: a step tool's schema is closed
+    #: (``additionalProperties: False``), so an argument the schema does not
+    #: declare is a call the step's own validation refuses — the wiring has
+    #: to land in a parameter the tool declared, or not land at all.
+    into: str = ""
     #: When true, a failure of this step does not abort the flow — it is
     #: recorded and the flow continues.  Defaults to false because a step
     #: that may fail silently is a step nobody notices failing.
@@ -180,6 +186,14 @@ class FlowSpec:
                     issues.append(
                         f"flow {self.name!r} step {index} declares from_step "
                         "without from_field"
+                    )
+                if not step.into:
+                    issues.append(
+                        f"flow {self.name!r} step {index} declares from_step "
+                        "without into — the wired value has to land in an "
+                        "argument the step's tool declares, and without "
+                        "into it lands under the field's own name, which a "
+                        "closed schema refuses"
                     )
         issues.extend(self.compensation.problems())
         return issues

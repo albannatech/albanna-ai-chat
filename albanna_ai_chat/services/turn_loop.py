@@ -257,6 +257,15 @@ def _run_tool(
     if problem:
         return ToolResult.failure(problem, error="invalid_arguments")
 
+    # A flow is not dispatched to a backend: it is expanded and run as a
+    # transaction here, where the approval gate has already been passed.
+    # Everything it does per step goes through this same function, so a
+    # step is validated exactly as a single call would be.
+    if spec.flow is not None:
+        from albanna_ai_chat.services.flow_runner import run_flow
+
+        return run_flow(spec, arguments, principal, conversation)
+
     context = ToolContext(
         principal=principal,
         site=frappe.local.site,
